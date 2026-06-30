@@ -168,13 +168,13 @@ function App() {
     <div className="grid min-h-screen md:grid-cols-[15.5rem_minmax(0,1fr)]">
       <aside className="border-b bg-card p-4 md:sticky md:top-0 md:h-screen md:border-r md:border-b-0 md:p-5">
         <div className="grid gap-4 md:gap-8">
-          <a
+          <NavLink
             className="text-xl font-black text-foreground"
-            href="/dashboard"
+            to="/dashboard"
             aria-label="Monsterly dashboard"
           >
             Monsterly
-          </a>
+          </NavLink>
           <nav className="flex gap-2 overflow-x-auto pb-1 md:grid md:overflow-visible md:pb-0">
             {navItems.map((item) => (
               <NavLink
