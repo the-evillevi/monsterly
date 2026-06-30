@@ -2,3 +2,4 @@ dist
 monsterly.md
 node_modules
 pnpm-lock.yaml
+supabase/.temp
