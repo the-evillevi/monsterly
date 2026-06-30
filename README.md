@@ -26,6 +26,26 @@ Create a production build:
 pnpm build
 ```
 
+## Supabase setup
+
+Monsterly uses a browser Supabase client configured with Vite environment
+variables. Create a local `.env` file from `.env.example`:
+
+```sh
+cp .env.example .env
+```
+
+Set these values from the client Supabase project API settings:
+
+```sh
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
+```
+
+Only use the public project URL and publishable key in the browser app. Never
+add the service role key, JWT secret, database password, or other server-only
+credentials to local frontend env files or host settings.
+
 ## Routing
 
 Monsterly currently uses React Router browser routing. Static hosts must rewrite
