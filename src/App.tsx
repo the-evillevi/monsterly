@@ -27,7 +27,10 @@ function App() {
         <Badge className="w-fit" variant="secondary">
           Offline-first gym subscription control
         </Badge>
-        <h1 id="page-title" className="text-5xl font-black leading-none text-foreground sm:text-7xl">
+        <h1
+          id="page-title"
+          className="text-5xl font-black leading-none text-foreground sm:text-7xl"
+        >
           Monsterly
         </h1>
         <p className="max-w-xl text-lg leading-8 text-muted-foreground">
@@ -36,10 +39,7 @@ function App() {
         <Button className="w-fit">View subscribers</Button>
       </section>
 
-      <section
-        className="mt-8 grid gap-4 md:grid-cols-3"
-        aria-label="Subscription status summary"
-      >
+      <section className="mt-8 grid gap-4 md:grid-cols-3" aria-label="Subscription status summary">
         {statusCards.map((card) => (
           <Card className="border-t-6" data-tone={card.tone} key={card.label}>
             <CardHeader>
