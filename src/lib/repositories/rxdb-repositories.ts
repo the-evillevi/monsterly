@@ -85,6 +85,8 @@ class RxDbSubscriberRepository implements SubscriberRepository {
     const now = new Date().toISOString();
     const existing = await this.options.db.subscribers.findOne(input.id).exec();
     const subscriber = {
+      _deleted: false,
+      _modified: now,
       gender: input.gender ?? 'unspecified',
       id: input.id,
       name: input.name,
@@ -131,6 +133,8 @@ class RxDbSubscriptionRepository implements SubscriptionRepository {
     const now = new Date().toISOString();
     const existing = await this.options.db.subscriptions.findOne(input.id).exec();
     const subscription = {
+      _deleted: false,
+      _modified: now,
       billing_period: input.billing_period,
       custom_days: input.custom_days,
       id: input.id,
@@ -175,6 +179,8 @@ class RxDbSubscriptionRepository implements SubscriptionRepository {
   async recordRenewal(input: SaveRenewalInput) {
     const now = new Date().toISOString();
     const renewal: RenewalDocument = {
+      _deleted: false,
+      _modified: now,
       created_at: now,
       id: input.id,
       new_paid_until_date: input.new_paid_until_date,

@@ -32,8 +32,19 @@ export const subscriberSchemaLiteral = {
     created_at: timestampSchema,
     updated_at: timestampSchema,
     deleted_at: optionalTimestampSchema,
+    _deleted: { type: 'boolean' },
+    _modified: timestampSchema,
   },
-  required: ['id', 'organization_id', 'name', 'gender', 'created_at', 'updated_at'],
+  required: [
+    'id',
+    'organization_id',
+    'name',
+    'gender',
+    'created_at',
+    'updated_at',
+    '_deleted',
+    '_modified',
+  ],
   indexes: [
     ['organization_id', 'name'],
     ['organization_id', 'updated_at'],
@@ -61,6 +72,8 @@ export const subscriptionSchemaLiteral = {
     created_at: timestampSchema,
     updated_at: timestampSchema,
     deleted_at: optionalTimestampSchema,
+    _deleted: { type: 'boolean' },
+    _modified: timestampSchema,
   },
   required: [
     'id',
@@ -72,6 +85,8 @@ export const subscriptionSchemaLiteral = {
     'paid_until_date',
     'created_at',
     'updated_at',
+    '_deleted',
+    '_modified',
   ],
   indexes: [
     ['organization_id', 'paid_until_date'],
@@ -95,6 +110,8 @@ export const renewalSchemaLiteral = {
     created_at: timestampSchema,
     updated_at: timestampSchema,
     deleted_at: optionalTimestampSchema,
+    _deleted: { type: 'boolean' },
+    _modified: timestampSchema,
   },
   required: [
     'id',
@@ -104,6 +121,8 @@ export const renewalSchemaLiteral = {
     'new_paid_until_date',
     'created_at',
     'updated_at',
+    '_deleted',
+    '_modified',
   ],
   indexes: [
     ['organization_id', 'created_at'],
@@ -113,6 +132,8 @@ export const renewalSchemaLiteral = {
 } as const;
 
 export type SubscriberDocument = {
+  _deleted: boolean;
+  _modified: string;
   created_at: string;
   deleted_at?: string;
   gender: 'female' | 'male' | 'non_binary' | 'unspecified';
@@ -124,6 +145,8 @@ export type SubscriberDocument = {
 };
 
 export type SubscriptionDocument = {
+  _deleted: boolean;
+  _modified: string;
   billing_period: 'weekly' | 'monthly' | 'bimonthly' | 'six_monthly' | 'yearly' | 'custom';
   created_at: string;
   custom_days?: number;
@@ -138,6 +161,8 @@ export type SubscriptionDocument = {
 };
 
 export type RenewalDocument = {
+  _deleted: boolean;
+  _modified: string;
   created_at: string;
   deleted_at?: string;
   id: string;
