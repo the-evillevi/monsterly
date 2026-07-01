@@ -4,7 +4,8 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SyncStatus } from '@/components/sync-status';
-import { useSubscriberSummaries } from '@/lib/repositories/use-subscriber-summaries';
+import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
+import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard' },
@@ -124,7 +125,7 @@ function PageFrame({ children, subtitle, title }: PageFrameProps) {
 }
 
 type SubscriberListProps = {
-  filterStatus?: string;
+  filterStatus?: SubscriptionStatus;
 };
 
 function SubscriberList({ filterStatus }: SubscriberListProps) {

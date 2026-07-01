@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useMemo } from 'react';
 import { getMonsterlyDatabase } from '@/lib/local-db/monsterly-db';
 import { getSupabaseClient, hasSupabaseConfig } from '@/lib/supabase';
 
-import { demoOrganizationId } from '../repositories/repository-context';
+import { demoOrganizationId } from '@/lib/data/data-layer-context';
 import {
   attachReplicationStatus,
   createSupabaseReplications,
