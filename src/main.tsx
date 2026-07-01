@@ -3,14 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './styles.css';
 import App from './App.tsx';
-import { RepositoryProvider } from '@/lib/repositories/repository-provider';
+import { DataLayerProvider } from '@/lib/data/data-layer-provider';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <RepositoryProvider>
+      <DataLayerProvider>
         <App />
-      </RepositoryProvider>
+      </DataLayerProvider>
     </BrowserRouter>
   </StrictMode>,
 );

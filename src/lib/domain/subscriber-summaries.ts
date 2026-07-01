@@ -1,6 +1,15 @@
-import type { SubscriberDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
-
 export type SubscriptionStatus = 'Al corriente' | 'Por vencer' | 'Vencido';
+
+type SubscriberSummarySource = {
+  id: string;
+  name: string;
+};
+
+type SubscriptionSummarySource = {
+  kind: 'gym' | 'crossfit';
+  paid_until_date: string;
+  subscriber_id: string;
+};
 
 export type SubscriberSummary = {
   id: string;
@@ -18,8 +27,8 @@ export function buildSubscriberSummaries({
   subscriptions,
   today = new Date(),
 }: {
-  subscribers: SubscriberDocument[];
-  subscriptions: SubscriptionDocument[];
+  subscribers: SubscriberSummarySource[];
+  subscriptions: SubscriptionSummarySource[];
   today?: Date;
 }): SubscriberSummary[] {
   return subscribers.map((subscriber) => {
@@ -40,7 +49,7 @@ export function buildSubscriberSummaries({
 }
 
 function getSubscriberStatus(
-  subscriptions: SubscriptionDocument[],
+  subscriptions: SubscriptionSummarySource[],
   today: Date,
 ): SubscriptionStatus {
   const statuses = subscriptions.map((subscription) =>
@@ -79,7 +88,7 @@ function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function getLatestPaidUntilDate(subscriptions: SubscriptionDocument[]) {
+function getLatestPaidUntilDate(subscriptions: SubscriptionSummarySource[]) {
   return subscriptions
     .map((subscription) => subscription.paid_until_date)
     .sort((left, right) => right.localeCompare(left))[0];
@@ -98,7 +107,7 @@ function formatPaidUntilLabel(paidUntilDate?: string) {
   }).format(date);
 }
 
-function formatPlan(subscriptions: SubscriptionDocument[]) {
+function formatPlan(subscriptions: SubscriptionSummarySource[]) {
   const kinds = subscriptions.map((subscription) => subscription.kind);
 
   if (kinds.includes('gym') && kinds.includes('crossfit')) {
