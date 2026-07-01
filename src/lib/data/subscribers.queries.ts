@@ -6,6 +6,7 @@ import type { SubscriberDocument } from '@/lib/local-db/monsterly-db';
 import type { DataModuleContext } from './data-layer-context';
 import type { SubscriberWithSubscriptions } from './subscriber-types';
 import { listSubscriptions, watchSubscriptions } from './subscriptions.queries';
+import { activeRecordSelector } from './active-records';
 
 export function watchSubscribers(
   context: DataModuleContext,
@@ -13,8 +14,7 @@ export function watchSubscribers(
   const subscribers$ = context.db.subscribers
     .find({
       selector: {
-        deleted_at: { $exists: false },
-        organization_id: context.activeOrganizationId,
+        ...activeRecordSelector(context.activeOrganizationId),
       },
       sort: [{ name: 'asc' }],
     })
@@ -49,8 +49,7 @@ export async function listSubscribers({
     db.subscribers
       .find({
         selector: {
-          deleted_at: { $exists: false },
-          organization_id: activeOrganizationId,
+          ...activeRecordSelector(activeOrganizationId),
         },
         sort: [{ name: 'asc' }],
       })

@@ -114,7 +114,7 @@ export const renewalSchemaLiteral = {
 
 export type SubscriberDocument = {
   created_at: string;
-  deleted_at?: string;
+  deleted_at?: string | null;
   gender: 'female' | 'male' | 'non_binary' | 'unspecified';
   id: string;
   name: string;
@@ -127,7 +127,7 @@ export type SubscriptionDocument = {
   billing_period: 'weekly' | 'monthly' | 'bimonthly' | 'six_monthly' | 'yearly' | 'custom';
   created_at: string;
   custom_days?: number;
-  deleted_at?: string;
+  deleted_at?: string | null;
   id: string;
   kind: 'gym' | 'crossfit';
   organization_id: string;
@@ -139,7 +139,7 @@ export type SubscriptionDocument = {
 
 export type RenewalDocument = {
   created_at: string;
-  deleted_at?: string;
+  deleted_at?: string | null;
   id: string;
   new_paid_until_date: string;
   organization_id: string;

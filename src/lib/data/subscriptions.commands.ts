@@ -1,5 +1,6 @@
 import type { RenewalDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
+import { activeRecordSelector } from './active-records';
 import type { DataModuleContext } from './data-layer-context';
 
 export type SaveSubscriptionInput = {
@@ -24,6 +25,19 @@ export async function saveSubscription(
   input: SaveSubscriptionInput,
 ) {
   const now = new Date().toISOString();
+  const subscriber = await db.subscribers
+    .findOne({
+      selector: {
+        ...activeRecordSelector(activeOrganizationId),
+        id: input.subscriber_id,
+      },
+    })
+    .exec();
+
+  if (!subscriber) {
+    throw new Error('Subscriber must belong to the active organization.');
+  }
+
   const existing = await db.subscriptions
     .findOne({
       selector: {
@@ -65,6 +79,19 @@ export async function recordRenewal(
   input: SaveRenewalInput,
 ) {
   const now = new Date().toISOString();
+  const subscription = await db.subscriptions
+    .findOne({
+      selector: {
+        ...activeRecordSelector(activeOrganizationId),
+        id: input.subscription_id,
+      },
+    })
+    .exec();
+
+  if (!subscription) {
+    throw new Error('Subscription must belong to the active organization.');
+  }
+
   const renewal: RenewalDocument = {
     created_at: now,
     id: input.id,

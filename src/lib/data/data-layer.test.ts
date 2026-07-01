@@ -4,13 +4,24 @@ import { resolve } from 'node:path';
 import { filter, firstValueFrom, take, timeout } from 'rxjs';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { closeMonsterlyDatabase, getMonsterlyDatabase } from '@/lib/local-db/monsterly-db';
+import {
+  closeMonsterlyDatabase,
+  getMonsterlyDatabase,
+  type RenewalDocument,
+  type SubscriberDocument,
+  type SubscriptionDocument,
+} from '@/lib/local-db/monsterly-db';
 
 import type { DataModuleContext } from './data-layer-context';
 import { saveSubscriber } from './subscribers.commands';
 import { listSubscribers, watchSubscriber, watchSubscribers } from './subscribers.queries';
-import { saveSubscription } from './subscriptions.commands';
-import { listSubscriptions } from './subscriptions.queries';
+import { recordRenewal, saveSubscription } from './subscriptions.commands';
+import {
+  listRenewals,
+  listSubscriptions,
+  watchRenewals,
+  watchSubscriptions,
+} from './subscriptions.queries';
 
 describe('RxDB data layer', () => {
   afterEach(async () => {
@@ -206,6 +217,184 @@ describe('RxDB data layer', () => {
     });
   });
 
+  it('treats null deleted_at records as active and excludes timestamped deletes', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const now = new Date().toISOString();
+
+    await organizationOne.db.subscribers.bulkInsert([
+      createSubscriber({
+        deleted_at: null,
+        id: 'active-null-subscriber',
+        name: 'Active Null',
+        organization_id: 'organization-1',
+      }),
+      createSubscriber({
+        deleted_at: now,
+        id: 'deleted-subscriber',
+        name: 'Deleted Subscriber',
+        organization_id: 'organization-1',
+      }),
+    ]);
+    await organizationOne.db.subscriptions.bulkInsert([
+      createSubscription({
+        deleted_at: null,
+        id: 'active-null-subscription',
+        organization_id: 'organization-1',
+        subscriber_id: 'active-null-subscriber',
+      }),
+      createSubscription({
+        deleted_at: now,
+        id: 'deleted-subscription',
+        organization_id: 'organization-1',
+        subscriber_id: 'active-null-subscriber',
+      }),
+    ]);
+    await organizationOne.db.renewals.bulkInsert([
+      createRenewal({
+        deleted_at: null,
+        id: 'active-null-renewal',
+        organization_id: 'organization-1',
+        subscription_id: 'active-null-subscription',
+      }),
+      createRenewal({
+        deleted_at: now,
+        id: 'deleted-renewal',
+        organization_id: 'organization-1',
+        subscription_id: 'active-null-subscription',
+      }),
+    ]);
+
+    await expect(listSubscribers(organizationOne)).resolves.toMatchObject([
+      { id: 'active-null-subscriber' },
+    ]);
+    await expect(listSubscriptions(organizationOne)).resolves.toMatchObject([
+      { id: 'active-null-subscription' },
+    ]);
+    await expect(listRenewals(organizationOne)).resolves.toMatchObject([
+      { id: 'active-null-renewal' },
+    ]);
+    await expect(
+      firstValueFrom(watchSubscribers(organizationOne).pipe(take(1))),
+    ).resolves.toMatchObject([{ id: 'active-null-subscriber' }]);
+    await expect(
+      firstValueFrom(watchSubscriptions(organizationOne).pipe(take(1))),
+    ).resolves.toMatchObject([{ id: 'active-null-subscription' }]);
+    await expect(
+      firstValueFrom(watchRenewals(organizationOne).pipe(take(1))),
+    ).resolves.toMatchObject([{ id: 'active-null-renewal' }]);
+  });
+
+  it('rejects subscriptions for missing or cross-organization subscribers', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const organizationTwo = await createTestContext('organization-2');
+
+    await saveSubscriber(organizationTwo, {
+      id: 'other-org-subscriber',
+      name: 'Other Org Subscriber',
+    });
+
+    await expect(
+      saveSubscription(organizationOne, {
+        id: 'missing-subscriber-subscription',
+        billing_period: 'monthly',
+        kind: 'gym',
+        paid_until_date: '2026-07-31',
+        start_date: '2026-07-01',
+        subscriber_id: 'missing-subscriber',
+      }),
+    ).rejects.toThrow('Subscriber must belong to the active organization.');
+    await expect(
+      saveSubscription(organizationOne, {
+        id: 'cross-org-subscription',
+        billing_period: 'monthly',
+        kind: 'gym',
+        paid_until_date: '2026-07-31',
+        start_date: '2026-07-01',
+        subscriber_id: 'other-org-subscriber',
+      }),
+    ).rejects.toThrow('Subscriber must belong to the active organization.');
+    await expect(listSubscriptions(organizationOne)).resolves.toEqual([]);
+  });
+
+  it('preserves an existing subscription when a cross-organization subscriber update is rejected', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const organizationTwo = await createTestContext('organization-2');
+
+    await saveSubscriber(organizationOne, {
+      id: 'active-subscriber',
+      name: 'Active Subscriber',
+    });
+    await saveSubscriber(organizationTwo, {
+      id: 'other-org-subscriber',
+      name: 'Other Org Subscriber',
+    });
+    await saveSubscription(organizationOne, {
+      id: 'subscription-1',
+      billing_period: 'monthly',
+      kind: 'gym',
+      paid_until_date: '2026-07-31',
+      start_date: '2026-07-01',
+      subscriber_id: 'active-subscriber',
+    });
+
+    await expect(
+      saveSubscription(organizationOne, {
+        id: 'subscription-1',
+        billing_period: 'weekly',
+        kind: 'crossfit',
+        paid_until_date: '2026-07-07',
+        start_date: '2026-07-01',
+        subscriber_id: 'other-org-subscriber',
+      }),
+    ).rejects.toThrow('Subscriber must belong to the active organization.');
+
+    await expect(listSubscriptions(organizationOne)).resolves.toMatchObject([
+      {
+        billing_period: 'monthly',
+        id: 'subscription-1',
+        kind: 'gym',
+        paid_until_date: '2026-07-31',
+        subscriber_id: 'active-subscriber',
+      },
+    ]);
+  });
+
+  it('rejects renewals for missing or cross-organization subscriptions', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const organizationTwo = await createTestContext('organization-2');
+
+    await saveSubscriber(organizationTwo, {
+      id: 'other-org-subscriber',
+      name: 'Other Org Subscriber',
+    });
+    await saveSubscription(organizationTwo, {
+      id: 'other-org-subscription',
+      billing_period: 'monthly',
+      kind: 'gym',
+      paid_until_date: '2026-07-31',
+      start_date: '2026-07-01',
+      subscriber_id: 'other-org-subscriber',
+    });
+
+    await expect(
+      recordRenewal(organizationOne, {
+        id: 'missing-subscription-renewal',
+        new_paid_until_date: '2026-08-31',
+        previous_paid_until_date: '2026-07-31',
+        subscription_id: 'missing-subscription',
+      }),
+    ).rejects.toThrow('Subscription must belong to the active organization.');
+    await expect(
+      recordRenewal(organizationOne, {
+        id: 'cross-org-renewal',
+        new_paid_until_date: '2026-08-31',
+        previous_paid_until_date: '2026-07-31',
+        subscription_id: 'other-org-subscription',
+      }),
+    ).rejects.toThrow('Subscription must belong to the active organization.');
+    await expect(listRenewals(organizationOne)).resolves.toEqual([]);
+  });
+
   it('keeps App UI code behind feature hooks instead of importing RxDB directly', async () => {
     const appSource = await readFile(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 
@@ -222,6 +411,51 @@ async function createTestContext(activeOrganizationId: string): Promise<DataModu
     activeOrganizationId,
     db,
   };
+}
+
+function createSubscriber(input: Partial<SubscriberDocument> & Pick<SubscriberDocument, 'id'>) {
+  const now = new Date().toISOString();
+
+  return {
+    created_at: now,
+    gender: 'unspecified',
+    name: 'Test Subscriber',
+    organization_id: 'organization-1',
+    updated_at: now,
+    ...input,
+  } satisfies SubscriberDocument;
+}
+
+function createSubscription(
+  input: Partial<SubscriptionDocument> & Pick<SubscriptionDocument, 'id' | 'subscriber_id'>,
+) {
+  const now = new Date().toISOString();
+
+  return {
+    billing_period: 'monthly',
+    created_at: now,
+    kind: 'gym',
+    organization_id: 'organization-1',
+    paid_until_date: '2026-07-31',
+    start_date: '2026-07-01',
+    updated_at: now,
+    ...input,
+  } satisfies SubscriptionDocument;
+}
+
+function createRenewal(
+  input: Partial<RenewalDocument> & Pick<RenewalDocument, 'id' | 'subscription_id'>,
+) {
+  const now = new Date().toISOString();
+
+  return {
+    created_at: now,
+    new_paid_until_date: '2026-08-31',
+    organization_id: 'organization-1',
+    previous_paid_until_date: '2026-07-31',
+    updated_at: now,
+    ...input,
+  } satisfies RenewalDocument;
 }
 
 function waitForEmission<T>(

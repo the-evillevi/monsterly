@@ -3,6 +3,7 @@ import { map } from 'rxjs';
 
 import type { RenewalDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
+import { activeRecordSelector } from './active-records';
 import type { DataModuleContext } from './data-layer-context';
 
 export function watchSubscriptions({
@@ -12,8 +13,7 @@ export function watchSubscriptions({
   return db.subscriptions
     .find({
       selector: {
-        deleted_at: { $exists: false },
-        organization_id: activeOrganizationId,
+        ...activeRecordSelector(activeOrganizationId),
       },
       sort: [{ paid_until_date: 'asc' }],
     })
@@ -27,8 +27,7 @@ export async function listSubscriptions({
   const documents = await db.subscriptions
     .find({
       selector: {
-        deleted_at: { $exists: false },
-        organization_id: activeOrganizationId,
+        ...activeRecordSelector(activeOrganizationId),
       },
       sort: [{ paid_until_date: 'asc' }],
     })
@@ -44,8 +43,7 @@ export function watchRenewals({
   return db.renewals
     .find({
       selector: {
-        deleted_at: { $exists: false },
-        organization_id: activeOrganizationId,
+        ...activeRecordSelector(activeOrganizationId),
       },
       sort: [{ created_at: 'desc' }],
     })
@@ -59,8 +57,7 @@ export async function listRenewals({
   const documents = await db.renewals
     .find({
       selector: {
-        deleted_at: { $exists: false },
-        organization_id: activeOrganizationId,
+        ...activeRecordSelector(activeOrganizationId),
       },
       sort: [{ created_at: 'desc' }],
     })
