@@ -34,6 +34,8 @@ describe('Supabase organization sync', () => {
     ]);
     expect(calls.every((call) => call.pull && call.push)).toBe(true);
     expect(calls.every((call) => call.replicationIdentifier.includes('organization-1'))).toBe(true);
+    expect(calls.every((call) => call.deletedField === '_deleted')).toBe(true);
+    expect(calls.every((call) => call.modifiedField === '_modified')).toBe(true);
   });
 
   it('adds organization filters to pull queries', async () => {

@@ -40,7 +40,12 @@ Set these values from the client Supabase project API settings:
 ```sh
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_MONSTERLY_ORGANIZATION_ID=
 ```
+
+`VITE_MONSTERLY_ORGANIZATION_ID` must be the UUID of the organization to sync.
+Without all three values, the app stays in offline demo mode and Supabase
+replication never starts.
 
 Only use the public project URL and publishable key in the browser app. Never
 add the service role key, JWT secret, database password, or other server-only

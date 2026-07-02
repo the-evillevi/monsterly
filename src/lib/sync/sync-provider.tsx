@@ -1,9 +1,8 @@
-import { type ReactNode, useEffect, useMemo } from 'react';
+import { type ReactNode, useContext, useEffect, useMemo } from 'react';
 
-import { getMonsterlyDatabase } from '@/lib/local-db/monsterly-db';
+import { DataLayerContext, isDemoOrganizationId } from '@/lib/data/data-layer-context';
 import { getSupabaseClient, hasSupabaseConfig } from '@/lib/supabase';
 
-import { demoOrganizationId } from '@/lib/data/data-layer-context';
 import {
   attachReplicationStatus,
   createSupabaseReplications,
@@ -13,31 +12,24 @@ import { SyncStatusContext } from './sync-context';
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const store = useMemo(() => createSyncStatusStore(), []);
+  const { activeOrganizationId, db } = useContext(DataLayerContext);
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-
-    async function startSync() {
-      if (!hasSupabaseConfig()) {
-        return;
-      }
-
-      const db = await getMonsterlyDatabase();
-      const replications = createSupabaseReplications({
-        activeOrganizationId: demoOrganizationId,
-        client: getSupabaseClient(),
-        db,
-      });
-      const status = attachReplicationStatus(replications, store);
-      cleanup = status.cancel;
+    if (!db || !hasSupabaseConfig() || isDemoOrganizationId(activeOrganizationId)) {
+      return;
     }
 
-    void startSync();
+    const replications = createSupabaseReplications({
+      activeOrganizationId,
+      client: getSupabaseClient(),
+      db,
+    });
+    const status = attachReplicationStatus(replications, store);
 
     return () => {
-      cleanup?.();
+      status.cancel();
     };
-  }, [store]);
+  }, [activeOrganizationId, db, store]);
 
   return <SyncStatusContext.Provider value={store}>{children}</SyncStatusContext.Provider>;
 }

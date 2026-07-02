@@ -1,8 +1,25 @@
 import { createContext } from 'react';
 
 import type { MonsterlyDatabase } from '@/lib/local-db/monsterly-db';
+import { getConfiguredOrganizationId, hasSupabaseConfig } from '@/lib/supabase';
 
 export const demoOrganizationId = 'local-demo-organization';
+
+export function isDemoOrganizationId(organizationId: string) {
+  return organizationId === demoOrganizationId || organizationId.startsWith('demo-');
+}
+
+export function resolveActiveOrganizationId() {
+  return hasSupabaseConfig()
+    ? (getConfiguredOrganizationId() ?? demoOrganizationId)
+    : demoOrganizationId;
+}
+
+export function getLocalDatabaseName(activeOrganizationId: string) {
+  return isDemoOrganizationId(activeOrganizationId)
+    ? 'monsterly'
+    : `monsterly-${activeOrganizationId.toLowerCase()}`;
+}
 
 export type DataLayerContextValue = {
   activeOrganizationId: string;

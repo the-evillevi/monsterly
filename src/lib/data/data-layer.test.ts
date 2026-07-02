@@ -12,7 +12,8 @@ import {
   type SubscriptionDocument,
 } from '@/lib/local-db/monsterly-db';
 
-import type { DataModuleContext } from './data-layer-context';
+import { type DataModuleContext, demoOrganizationId } from './data-layer-context';
+import { seedDemoSubscribers } from './seed-demo-subscribers';
 import { saveSubscriber } from './subscribers.commands';
 import { listSubscribers, watchSubscriber, watchSubscribers } from './subscribers.queries';
 import { recordRenewal, saveSubscription } from './subscriptions.commands';
@@ -393,6 +394,27 @@ describe('RxDB data layer', () => {
       }),
     ).rejects.toThrow('Subscription must belong to the active organization.');
     await expect(listRenewals(organizationOne)).resolves.toEqual([]);
+  });
+
+  it('skips demo seeding when a sync organization is active', async () => {
+    const syncContext = await createTestContext('3f2504e0-4f89-41d3-9a0c-0305e82c3301');
+
+    await seedDemoSubscribers(syncContext);
+
+    await expect(listSubscribers(syncContext)).resolves.toEqual([]);
+  });
+
+  it('seeds demo data for the offline demo organization', async () => {
+    const demoContext = await createTestContext(demoOrganizationId);
+
+    await seedDemoSubscribers(demoContext);
+
+    const subscribers = await listSubscribers(demoContext);
+
+    expect(subscribers.length).toBeGreaterThan(0);
+    expect(subscribers.every((subscriber) => subscriber.id.startsWith('demo-subscriber-'))).toBe(
+      true,
+    );
   });
 
   it('keeps App UI code behind feature hooks instead of importing RxDB directly', async () => {

@@ -20,9 +20,23 @@ export function getSupabaseClient() {
   return supabaseClient;
 }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function getConfiguredOrganizationId(): string | undefined {
+  const organizationId = import.meta.env.VITE_MONSTERLY_ORGANIZATION_ID?.trim();
+
+  if (!organizationId || !uuidPattern.test(organizationId)) {
+    return undefined;
+  }
+
+  return organizationId.toLowerCase();
+}
+
 export function hasSupabaseConfig() {
   return Boolean(
-    import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    import.meta.env.VITE_SUPABASE_URL &&
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY &&
+    getConfiguredOrganizationId(),
   );
 }
 
