@@ -16,8 +16,10 @@ export function resolveActiveOrganizationId() {
 }
 
 export function getLocalDatabaseName(activeOrganizationId: string) {
+  // 'monsterly-demo' abandons pre-EVL-82 'monsterly' databases whose schema
+  // hash no longer matches (RxDB DB6) instead of colliding with them.
   return isDemoOrganizationId(activeOrganizationId)
-    ? 'monsterly'
+    ? 'monsterly-demo'
     : `monsterly-${activeOrganizationId.toLowerCase()}`;
 }
 

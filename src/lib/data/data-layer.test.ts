@@ -12,7 +12,11 @@ import {
   type SubscriptionDocument,
 } from '@/lib/local-db/monsterly-db';
 
-import { type DataModuleContext, demoOrganizationId } from './data-layer-context';
+import {
+  type DataModuleContext,
+  demoOrganizationId,
+  getLocalDatabaseName,
+} from './data-layer-context';
 import { seedDemoSubscribers } from './seed-demo-subscribers';
 import { saveSubscriber } from './subscribers.commands';
 import { listSubscribers, watchSubscriber, watchSubscribers } from './subscribers.queries';
@@ -394,6 +398,14 @@ describe('RxDB data layer', () => {
       }),
     ).rejects.toThrow('Subscription must belong to the active organization.');
     await expect(listRenewals(organizationOne)).resolves.toEqual([]);
+  });
+
+  it('keeps demo and sync organizations in separate local databases', () => {
+    expect(getLocalDatabaseName(demoOrganizationId)).toBe('monsterly-demo');
+    expect(getLocalDatabaseName('demo-organization-2')).toBe('monsterly-demo');
+    expect(getLocalDatabaseName('3F2504E0-4F89-41D3-9A0C-0305E82C3301')).toBe(
+      'monsterly-3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    );
   });
 
   it('skips demo seeding when a sync organization is active', async () => {
