@@ -12,7 +12,12 @@ import {
   type SubscriptionDocument,
 } from '@/lib/local-db/monsterly-db';
 
-import type { DataModuleContext } from './data-layer-context';
+import {
+  type DataModuleContext,
+  demoOrganizationId,
+  getLocalDatabaseName,
+} from './data-layer-context';
+import { seedDemoSubscribers } from './seed-demo-subscribers';
 import { saveSubscriber } from './subscribers.commands';
 import { listSubscribers, watchSubscriber, watchSubscribers } from './subscribers.queries';
 import { recordRenewal, saveSubscription } from './subscriptions.commands';
@@ -395,6 +400,35 @@ describe('RxDB data layer', () => {
     await expect(listRenewals(organizationOne)).resolves.toEqual([]);
   });
 
+  it('keeps demo and sync organizations in separate local databases', () => {
+    expect(getLocalDatabaseName(demoOrganizationId)).toBe('monsterly-demo');
+    expect(getLocalDatabaseName('demo-organization-2')).toBe('monsterly-demo');
+    expect(getLocalDatabaseName('3F2504E0-4F89-41D3-9A0C-0305E82C3301')).toBe(
+      'monsterly-3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    );
+  });
+
+  it('skips demo seeding when a sync organization is active', async () => {
+    const syncContext = await createTestContext('3f2504e0-4f89-41d3-9a0c-0305e82c3301');
+
+    await seedDemoSubscribers(syncContext);
+
+    await expect(listSubscribers(syncContext)).resolves.toEqual([]);
+  });
+
+  it('seeds demo data for the offline demo organization', async () => {
+    const demoContext = await createTestContext(demoOrganizationId);
+
+    await seedDemoSubscribers(demoContext);
+
+    const subscribers = await listSubscribers(demoContext);
+
+    expect(subscribers.length).toBeGreaterThan(0);
+    expect(subscribers.every((subscriber) => subscriber.id.startsWith('demo-subscriber-'))).toBe(
+      true,
+    );
+  });
+
   it('keeps App UI code behind feature hooks instead of importing RxDB directly', async () => {
     const appSource = await readFile(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 
@@ -417,6 +451,8 @@ function createSubscriber(input: Partial<SubscriberDocument> & Pick<SubscriberDo
   const now = new Date().toISOString();
 
   return {
+    _deleted: false,
+    _modified: now,
     created_at: now,
     gender: 'unspecified',
     name: 'Test Subscriber',
@@ -432,6 +468,8 @@ function createSubscription(
   const now = new Date().toISOString();
 
   return {
+    _deleted: false,
+    _modified: now,
     billing_period: 'monthly',
     created_at: now,
     kind: 'gym',
@@ -449,6 +487,8 @@ function createRenewal(
   const now = new Date().toISOString();
 
   return {
+    _deleted: false,
+    _modified: now,
     created_at: now,
     new_paid_until_date: '2026-08-31',
     organization_id: 'organization-1',

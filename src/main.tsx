@@ -4,12 +4,15 @@ import { BrowserRouter } from 'react-router-dom';
 import './styles.css';
 import App from './App.tsx';
 import { DataLayerProvider } from '@/lib/data/data-layer-provider';
+import { SyncProvider } from '@/lib/sync/sync-provider';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <DataLayerProvider>
-        <App />
+        <SyncProvider>
+          <App />
+        </SyncProvider>
       </DataLayerProvider>
     </BrowserRouter>
   </StrictMode>,

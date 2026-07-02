@@ -47,6 +47,8 @@ export async function saveSubscription(
     })
     .exec();
   const subscription = {
+    _deleted: false,
+    _modified: now,
     billing_period: input.billing_period,
     custom_days: input.custom_days,
     id: input.id,
@@ -93,6 +95,8 @@ export async function recordRenewal(
   }
 
   const renewal: RenewalDocument = {
+    _deleted: false,
+    _modified: now,
     created_at: now,
     id: input.id,
     new_paid_until_date: input.new_paid_until_date,

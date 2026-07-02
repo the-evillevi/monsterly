@@ -31,6 +31,8 @@ describe('Monsterly local RxDB database', () => {
     const db = await getMonsterlyDatabase({ name: 'monsterly-test' });
 
     await db.subscribers.insert({
+      _deleted: false,
+      _modified: '2026-07-01T00:00:00.000Z',
       id: 'subscriber-1',
       organization_id: 'organization-1',
       name: 'Mariana Soto',
@@ -42,6 +44,8 @@ describe('Monsterly local RxDB database', () => {
     });
 
     await db.subscriptions.insert({
+      _deleted: false,
+      _modified: '2026-07-01T00:00:00.000Z',
       id: 'subscription-1',
       organization_id: 'organization-1',
       subscriber_id: 'subscriber-1',

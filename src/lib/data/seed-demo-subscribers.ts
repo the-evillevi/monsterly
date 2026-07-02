@@ -1,9 +1,13 @@
-import type { DataModuleContext } from './data-layer-context';
+import { type DataModuleContext, demoOrganizationId } from './data-layer-context';
 import { listSubscribers } from './subscribers.queries';
 import { saveSubscriber } from './subscribers.commands';
 import { saveSubscription } from './subscriptions.commands';
 
 export async function seedDemoSubscribers(context: DataModuleContext) {
+  if (context.activeOrganizationId !== demoOrganizationId) {
+    return;
+  }
+
   const existingSubscribers = await listSubscribers(context);
 
   if (existingSubscribers.length > 0) {

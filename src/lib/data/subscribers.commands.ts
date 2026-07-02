@@ -23,6 +23,8 @@ export async function saveSubscriber(
     })
     .exec();
   const subscriber = {
+    _deleted: false,
+    _modified: now,
     gender: input.gender ?? 'unspecified',
     id: input.id,
     name: input.name,

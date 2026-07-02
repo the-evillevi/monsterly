@@ -3,6 +3,7 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SyncStatus } from '@/components/sync-status';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
 
@@ -168,6 +169,7 @@ function App() {
           >
             Monsterly
           </NavLink>
+          <SyncStatus />
           <nav className="flex gap-2 overflow-x-auto pb-1 md:grid md:overflow-visible md:pb-0">
             {navItems.map((item) => (
               <NavLink
