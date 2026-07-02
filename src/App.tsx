@@ -3,6 +3,8 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
+import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard' },
@@ -12,37 +14,26 @@ const navItems = [
   { label: 'Settings', path: '/settings' },
 ];
 
-const metrics = [
-  { label: 'Al corriente', value: '52', tone: 'success' },
-  { label: 'Por vencer', value: '18', tone: 'warning' },
-  { label: 'Vencidos', value: '10', tone: 'destructive' },
-] as const;
-
-const subscribers = [
-  {
-    name: 'Mariana Soto',
-    plan: 'Gym mensual',
-    status: 'Al corriente',
-    paidUntil: 'Jul 24',
-    paidUntilDate: '2026-07-24',
-  },
-  {
-    name: 'Carlos Perez',
-    plan: 'CrossFit semanal',
-    status: 'Por vencer',
-    paidUntil: 'Jul 02',
-    paidUntilDate: '2026-07-02',
-  },
-  {
-    name: 'Lucia Ramos',
-    plan: 'Gym + CrossFit',
-    status: 'Vencido',
-    paidUntil: 'Jun 25',
-    paidUntilDate: '2026-06-25',
-  },
-] as const;
-
 function DashboardPage() {
+  const { summaries } = useSubscriberSummaries();
+  const metrics = [
+    {
+      label: 'Al corriente',
+      tone: 'success',
+      value: summaries.filter((summary) => summary.status === 'Al corriente').length.toString(),
+    },
+    {
+      label: 'Por vencer',
+      tone: 'warning',
+      value: summaries.filter((summary) => summary.status === 'Por vencer').length.toString(),
+    },
+    {
+      label: 'Vencidos',
+      tone: 'destructive',
+      value: summaries.filter((summary) => summary.status === 'Vencido').length.toString(),
+    },
+  ] as const;
+
   return (
     <PageFrame title="Dashboard" subtitle="Fast payment status at a glance.">
       <section className="grid gap-4 md:grid-cols-3" aria-label="Subscription status summary">
@@ -133,18 +124,20 @@ function PageFrame({ children, subtitle, title }: PageFrameProps) {
 }
 
 type SubscriberListProps = {
-  filterStatus?: string;
+  filterStatus?: SubscriptionStatus;
 };
 
 function SubscriberList({ filterStatus }: SubscriberListProps) {
-  const visibleSubscribers = filterStatus
-    ? subscribers.filter((subscriber) => subscriber.status === filterStatus)
-    : subscribers;
+  const { isLoading, summaries } = useSubscriberSummaries(filterStatus);
+
+  if (isLoading) {
+    return <p className="text-muted-foreground">Loading subscribers...</p>;
+  }
 
   return (
     <div className="grid max-w-3xl gap-3">
-      {visibleSubscribers.map((subscriber) => (
-        <Card className="p-4" key={subscriber.name}>
+      {summaries.map((subscriber) => (
+        <Card className="p-4" key={subscriber.id}>
           <article className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className="grid gap-1">
               <strong className="text-foreground">{subscriber.name}</strong>
@@ -153,7 +146,7 @@ function SubscriberList({ filterStatus }: SubscriberListProps) {
             <div className="grid gap-2 sm:justify-items-end">
               <Badge variant="outline">{subscriber.status}</Badge>
               <time className="text-sm text-muted-foreground" dateTime={subscriber.paidUntilDate}>
-                Paid until {subscriber.paidUntil}
+                Paid until {subscriber.paidUntilLabel}
               </time>
             </div>
           </article>

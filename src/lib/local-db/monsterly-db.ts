@@ -80,9 +80,41 @@ export const subscriptionSchemaLiteral = {
   ],
 } as const;
 
+export const renewalSchemaLiteral = {
+  title: 'renewal schema',
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    organization_id: { type: 'string', maxLength: 100 },
+    subscription_id: { type: 'string', maxLength: 100 },
+    previous_paid_until_date: dateSchema,
+    new_paid_until_date: dateSchema,
+    created_at: timestampSchema,
+    updated_at: timestampSchema,
+    deleted_at: optionalTimestampSchema,
+  },
+  required: [
+    'id',
+    'organization_id',
+    'subscription_id',
+    'previous_paid_until_date',
+    'new_paid_until_date',
+    'created_at',
+    'updated_at',
+  ],
+  indexes: [
+    ['organization_id', 'created_at'],
+    ['organization_id', 'subscription_id'],
+    ['organization_id', 'updated_at'],
+  ],
+} as const;
+
 export type SubscriberDocument = {
   created_at: string;
-  deleted_at?: string;
+  deleted_at?: string | null;
   gender: 'female' | 'male' | 'non_binary' | 'unspecified';
   id: string;
   name: string;
@@ -95,7 +127,7 @@ export type SubscriptionDocument = {
   billing_period: 'weekly' | 'monthly' | 'bimonthly' | 'six_monthly' | 'yearly' | 'custom';
   created_at: string;
   custom_days?: number;
-  deleted_at?: string;
+  deleted_at?: string | null;
   id: string;
   kind: 'gym' | 'crossfit';
   organization_id: string;
@@ -105,10 +137,23 @@ export type SubscriptionDocument = {
   updated_at: string;
 };
 
+export type RenewalDocument = {
+  created_at: string;
+  deleted_at?: string | null;
+  id: string;
+  new_paid_until_date: string;
+  organization_id: string;
+  previous_paid_until_date: string;
+  subscription_id: string;
+  updated_at: string;
+};
+
 export const subscriberSchema: RxJsonSchema<SubscriberDocument> = subscriberSchemaLiteral;
 export const subscriptionSchema: RxJsonSchema<SubscriptionDocument> = subscriptionSchemaLiteral;
+export const renewalSchema: RxJsonSchema<RenewalDocument> = renewalSchemaLiteral;
 
 export type MonsterlyCollections = {
+  renewals: RxCollection<RenewalDocument>;
   subscribers: RxCollection<SubscriberDocument>;
   subscriptions: RxCollection<SubscriptionDocument>;
 };
@@ -144,6 +189,9 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
   });
 
   await database.addCollections({
+    renewals: {
+      schema: renewalSchema,
+    },
     subscribers: {
       schema: subscriberSchema,
     },
