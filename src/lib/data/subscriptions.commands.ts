@@ -25,27 +25,28 @@ export async function saveSubscription(
   input: SaveSubscriptionInput,
 ) {
   const now = new Date().toISOString();
-  const subscriber = await db.subscribers
-    .findOne({
-      selector: {
-        ...activeRecordSelector(activeOrganizationId),
-        id: input.subscriber_id,
-      },
-    })
-    .exec();
+  const [subscriber, existing] = await Promise.all([
+    db.subscribers
+      .findOne({
+        selector: {
+          ...activeRecordSelector(activeOrganizationId),
+          id: input.subscriber_id,
+        },
+      })
+      .exec(),
+    db.subscriptions
+      .findOne({
+        selector: {
+          id: input.id,
+          organization_id: activeOrganizationId,
+        },
+      })
+      .exec(),
+  ]);
 
   if (!subscriber) {
     throw new Error('Subscriber must belong to the active organization.');
   }
-
-  const existing = await db.subscriptions
-    .findOne({
-      selector: {
-        id: input.id,
-        organization_id: activeOrganizationId,
-      },
-    })
-    .exec();
   const subscription = {
     _deleted: false,
     _modified: now,

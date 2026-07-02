@@ -39,9 +39,3 @@ export function hasSupabaseConfig() {
     getConfiguredOrganizationId(),
   );
 }
-
-export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
-  get(_target, property, receiver) {
-    return Reflect.get(getSupabaseClient(), property, receiver);
-  },
-});
