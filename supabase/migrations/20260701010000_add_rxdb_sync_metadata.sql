@@ -16,7 +16,6 @@ language plpgsql
 as $$
 begin
   new._modified = now();
-  new._deleted = new.deleted_at is not null;
   return new;
 end;
 $$;
