@@ -14,7 +14,7 @@ type SubscriptionSummarySource = {
 export type SubscriberSummary = {
   id: string;
   name: string;
-  paidUntilDate: string;
+  paidUntilDate?: string;
   paidUntilLabel: string;
   plan: string;
   status: SubscriptionStatus;
@@ -88,7 +88,7 @@ function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function getLatestPaidUntilDate(subscriptions: SubscriptionSummarySource[]) {
+function getLatestPaidUntilDate(subscriptions: SubscriptionSummarySource[]): string | undefined {
   return subscriptions
     .map((subscription) => subscription.paid_until_date)
     .sort((left, right) => right.localeCompare(left))[0];

@@ -2,11 +2,13 @@
 -- Use one of the organization ids as VITE_MONSTERLY_ORGANIZATION_ID to test
 -- RxDB replication scoped to that organization.
 --
--- LOCAL DEV ONLY: seed.sql runs exclusively on `supabase db reset` against the
--- local stack, never on a linked remote project. The anon grants and policies
--- below let RxDB replication run without auth while authentication is out of
--- scope (EVL-82); production access stays restricted to authenticated
--- organization members by the migrations.
+-- LOCAL DEV ONLY: the anon grants and policies below let RxDB replication run
+-- without auth while authentication is out of scope (EVL-82). WARNING: this
+-- file runs on every `supabase db reset`, INCLUDING `supabase db reset
+-- --linked`, which would apply these permissive anon policies to the linked
+-- remote project. Never run `db reset --linked` (or pass --no-seed) against a
+-- shared or production project; use `supabase db push` for remote migrations
+-- so production access stays restricted to authenticated organization members.
 
 grant usage on schema public to anon;
 grant select, insert, update on public.subscribers to anon;
