@@ -151,9 +151,7 @@ function SubscriberList({ filterStatus }: SubscriberListProps) {
                 <time className="text-sm text-muted-foreground" dateTime={subscriber.paidUntilDate}>
                   Paid until {subscriber.paidUntilLabel}
                 </time>
-              ) : (
-                <span className="text-sm text-muted-foreground">{subscriber.paidUntilLabel}</span>
-              )}
+              ) : null}
             </div>
           </article>
         </Card>
