@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import type { SubscriberDocument } from '@/lib/local-db/monsterly-db';
+import { type SubscriberGender, subscriberGenders } from '@/lib/local-db/monsterly-db';
 
 export type SubscriberFormValues = {
-  gender: SubscriberDocument['gender'];
+  gender: SubscriberGender;
   name: string;
   phone_number?: string;
 };
@@ -20,12 +20,16 @@ type SubscriberFormProps = {
   submitLabel: string;
 };
 
-const genderOptions = [
-  { label: 'Prefiero no decir', value: 'unspecified' },
-  { label: 'Femenino', value: 'female' },
-  { label: 'Masculino', value: 'male' },
-  { label: 'No binario', value: 'non_binary' },
-] as const;
+const genderLabels: Record<SubscriberGender, string> = {
+  female: 'Femenino',
+  male: 'Masculino',
+  non_binary: 'No binario',
+  unspecified: 'Prefiero no decir',
+};
+
+function toGender(value: FormDataEntryValue | null): SubscriberGender {
+  return subscriberGenders.find((gender) => gender === value) ?? 'unspecified';
+}
 
 export function SubscriberForm({
   defaultValues,
@@ -34,6 +38,7 @@ export function SubscriberForm({
   submitLabel,
 }: SubscriberFormProps) {
   const [nameError, setNameError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -47,14 +52,18 @@ export function SubscriberForm({
     }
 
     setNameError(null);
+    setSubmitError(null);
     setIsSaving(true);
 
     try {
       await onSubmit({
-        gender: formData.get('gender') as SubscriberFormValues['gender'],
+        gender: toGender(formData.get('gender')),
         name,
         phone_number: String(formData.get('phone_number') ?? '').trim() || undefined,
       });
+    } catch (error) {
+      console.error('Failed to save the subscriber.', error);
+      setSubmitError('No se pudieron guardar los cambios. Intenta de nuevo.');
     } finally {
       setIsSaving(false);
     }
@@ -84,9 +93,9 @@ export function SubscriberForm({
           id="subscriber-gender"
           name="gender"
         >
-          {genderOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
+          {subscriberGenders.map((gender) => (
+            <option key={gender} value={gender}>
+              {genderLabels[gender]}
             </option>
           ))}
         </Select>
@@ -102,6 +111,11 @@ export function SubscriberForm({
           type="tel"
         />
       </div>
+      {submitError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {submitError}
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button disabled={isSaving} type="submit">
           {submitLabel}

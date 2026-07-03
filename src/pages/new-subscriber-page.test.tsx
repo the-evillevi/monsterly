@@ -2,19 +2,15 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { DataLayerContext } from '@/lib/data/data-layer-context';
+import { DataLayerContext, type DataLayerContextValue } from '@/lib/data/data-layer-context';
 import { listSubscribers } from '@/lib/data/subscribers.queries';
-import { closeMonsterlyDatabase, getMonsterlyDatabase } from '@/lib/local-db/monsterly-db';
+import { cleanupTestDatabase, createTestDataContext } from '@/test/test-data-layer';
 
 import { NewSubscriberPage } from './new-subscriber-page';
 
-const organizationId = 'organization-1';
-
-async function renderNewSubscriberPage() {
-  const db = await getMonsterlyDatabase({ name: 'monsterly-test' });
-
+function renderPage(value: DataLayerContextValue) {
   render(
-    <DataLayerContext.Provider value={{ activeOrganizationId: organizationId, db }}>
+    <DataLayerContext.Provider value={value}>
       <MemoryRouter initialEntries={['/subscribers/new']}>
         <Routes>
           <Route path="/subscribers" element={<p>subscribers-list</p>} />
@@ -23,14 +19,18 @@ async function renderNewSubscriberPage() {
       </MemoryRouter>
     </DataLayerContext.Provider>,
   );
+}
 
-  return { activeOrganizationId: organizationId, db };
+async function renderNewSubscriberPage() {
+  const context = await createTestDataContext();
+  renderPage(context);
+
+  return context;
 }
 
 describe('NewSubscriberPage', () => {
   afterEach(async () => {
-    await closeMonsterlyDatabase();
-    indexedDB.deleteDatabase('monsterly-test');
+    await cleanupTestDatabase();
   });
 
   it('requires a name and saves nothing without one', async () => {
@@ -69,5 +69,17 @@ describe('NewSubscriberPage', () => {
     const [subscriber] = await listSubscribers(context);
     expect(subscriber).toMatchObject({ name: 'Luis Vega' });
     expect(subscriber?.phone_number ?? null).toBeNull();
+  });
+
+  it('shows a save error when the database is not ready', async () => {
+    renderPage({ activeOrganizationId: 'organization-1', db: null });
+
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Ana Torres' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(
+      await screen.findByText('No se pudieron guardar los cambios. Intenta de nuevo.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled();
   });
 });

@@ -419,6 +419,15 @@ describe('RxDB data layer', () => {
     ]);
   });
 
+  it('rejects empty subscriber names', async () => {
+    const context = await createTestContext('organization-1');
+
+    await expect(saveSubscriber(context, { name: '   ' })).rejects.toThrow(
+      'Subscriber name is required.',
+    );
+    await expect(listSubscribers(context)).resolves.toEqual([]);
+  });
+
   it('skips demo seeding when a sync organization is active', async () => {
     const syncContext = await createTestContext('3f2504e0-4f89-41d3-9a0c-0305e82c3301');
 
