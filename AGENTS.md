@@ -34,7 +34,7 @@ duplicate the brief in code or docs unless the task explicitly asks for it.
 - Static host fallbacks live in `vercel.json` and `public/_redirects`.
 
 Current routing is intentionally browser-routing based. The fuller migration to
-React Router's `createBrowserRouter` is deferred to EVL-83.
+React Router's `createBrowserRouter` is deferred until a route-data need arises.
 
 ## Code Style
 
@@ -89,7 +89,8 @@ final summary when they remain.
 ## Do Not
 
 - Do not add new libraries when existing stack patterns are enough.
-- Do not switch routing strategy away from browser routing before EVL-83.
+- Do not switch routing strategy away from browser routing unless an issue
+  explicitly calls for it.
 - Do not introduce a public landing page unless explicitly requested.
 - Do not store derived subscription status as permanent data unless the product
   plan changes.
