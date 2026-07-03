@@ -193,7 +193,10 @@ export function attachReplicationStatus(
     onOnline: () => {
       store.setSyncing();
       replications.forEach((replication) => {
-        void replication.start?.();
+        // reSync, not start: the replication is already live and its Supabase
+        // Realtime channel is subscribed; start() would re-add postgres_changes
+        // callbacks after subscribe(), which supabase-js rejects.
+        replication.reSync?.();
       });
     },
   });

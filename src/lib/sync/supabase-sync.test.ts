@@ -4,6 +4,7 @@ import { closeMonsterlyDatabase, getMonsterlyDatabase } from '@/lib/local-db/mon
 
 import {
   attachConnectivityStatus,
+  attachReplicationStatus,
   createSupabaseReplications,
   createSyncStatusStore,
 } from './supabase-sync';
@@ -136,6 +137,20 @@ describe('Supabase organization sync', () => {
     expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'local' });
   });
 
+  it('resyncs live replications when connectivity returns instead of restarting them', () => {
+    const replications = [createReplicationStateStub(), createReplicationStateStub()];
+    const status = attachReplicationStatus(replications, createSyncStatusStore());
+
+    window.dispatchEvent(new Event('online'));
+
+    for (const replication of replications) {
+      expect(replication.reSync).toHaveBeenCalledTimes(1);
+    }
+    expect(status.store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'syncing' });
+
+    status.cancel();
+  });
+
   it('reacts to window connectivity events', () => {
     const store = createSyncStatusStore();
     const onOnline = vi.fn(() => store.setLocal());
@@ -163,7 +178,7 @@ function createReplicationStateStub() {
     active$: { subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })) },
     cancel: vi.fn(),
     error$: { subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })) },
-    start: vi.fn(),
+    reSync: vi.fn(),
   };
 }
 

@@ -22,7 +22,7 @@ export type SyncReplicationState = {
   active$: SyncObservable<boolean>;
   cancel: () => unknown;
   error$: SyncObservable<unknown>;
-  start?: () => unknown;
+  reSync?: () => void;
 };
 
 export type SyncReplicationFactoryCall = {
