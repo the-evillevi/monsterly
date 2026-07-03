@@ -19,12 +19,28 @@ export function SubscriberList({ filterStatus }: SubscriberListProps) {
       {summaries.map((subscriber) => (
         <Card className="p-4" key={subscriber.id}>
           <article className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-            <div className="grid gap-1">
+            <div className="grid gap-1 justify-items-start">
               <strong className="text-foreground">{subscriber.name}</strong>
-              <span className="text-muted-foreground">{subscriber.plan}</span>
+              {subscriber.phoneNumber ? (
+                <a
+                  className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+                  href={`tel:${subscriber.phoneNumber}`}
+                >
+                  {subscriber.phoneNumber}
+                </a>
+              ) : null}
             </div>
             <div className="grid gap-2 sm:justify-items-end">
               <Badge variant="outline">{subscriber.status}</Badge>
+              {subscriber.plans.length > 0 ? (
+                <div className="flex gap-1">
+                  {subscriber.plans.map((plan) => (
+                    <Badge key={plan} variant="secondary">
+                      {plan}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
               {subscriber.paidUntilDate ? (
                 <time className="text-sm text-muted-foreground" dateTime={subscriber.paidUntilDate}>
                   Paid until {subscriber.paidUntilLabel}

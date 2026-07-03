@@ -2,9 +2,12 @@ export type SubscriptionStatus = 'Al corriente' | 'Por vencer' | 'Vencido';
 
 export type SubscriberStatus = SubscriptionStatus | 'Sin suscripción';
 
+export type SubscriptionPlan = 'Gym' | 'CrossFit';
+
 type SubscriberSummarySource = {
   id: string;
   name: string;
+  phone_number?: string | null;
 };
 
 type SubscriptionSummarySource = {
@@ -18,7 +21,8 @@ export type SubscriberSummary = {
   name: string;
   paidUntilDate?: string;
   paidUntilLabel: string;
-  plan: string;
+  phoneNumber?: string;
+  plans: SubscriptionPlan[];
   status: SubscriberStatus;
 };
 
@@ -44,7 +48,8 @@ export function buildSubscriberSummaries({
       name: subscriber.name,
       paidUntilDate: latestPaidUntilDate,
       paidUntilLabel: formatPaidUntilLabel(latestPaidUntilDate),
-      plan: formatPlan(subscriberSubscriptions),
+      phoneNumber: subscriber.phone_number ?? undefined,
+      plans: getPlanLabels(subscriberSubscriptions),
       status: getSubscriberStatus(subscriberSubscriptions, today),
     };
   });
@@ -113,20 +118,17 @@ function formatPaidUntilLabel(paidUntilDate?: string) {
   }).format(date);
 }
 
-function formatPlan(subscriptions: SubscriptionSummarySource[]) {
-  const kinds = subscriptions.map((subscription) => subscription.kind);
+function getPlanLabels(subscriptions: SubscriptionSummarySource[]): SubscriptionPlan[] {
+  const kinds = new Set(subscriptions.map((subscription) => subscription.kind));
+  const plans: SubscriptionPlan[] = [];
 
-  if (kinds.includes('gym') && kinds.includes('crossfit')) {
-    return 'Gym + CrossFit';
+  if (kinds.has('gym')) {
+    plans.push('Gym');
   }
 
-  if (kinds.includes('crossfit')) {
-    return 'CrossFit';
+  if (kinds.has('crossfit')) {
+    plans.push('CrossFit');
   }
 
-  if (kinds.includes('gym')) {
-    return 'Gym';
-  }
-
-  return 'Sin suscripción';
+  return plans;
 }
