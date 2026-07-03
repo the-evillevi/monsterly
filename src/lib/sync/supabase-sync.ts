@@ -81,6 +81,13 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
         phase: 'idle',
       });
     },
+    setLocal: () => {
+      emit({
+        error: null,
+        isOnline: snapshot.isOnline,
+        phase: 'local',
+      });
+    },
     setOffline: () => {
       emit({
         error: null,
@@ -105,6 +112,31 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
   };
 }
 
+export type SyncStatusStore = ReturnType<typeof createSyncStatusStore>;
+
+export function attachConnectivityStatus(
+  store: SyncStatusStore,
+  { onOnline }: { onOnline: () => void },
+) {
+  function handleOffline() {
+    store.setOffline();
+  }
+
+  function handleOnline() {
+    onOnline();
+  }
+
+  window.addEventListener('offline', handleOffline);
+  window.addEventListener('online', handleOnline);
+
+  return {
+    cancel: () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    },
+  };
+}
+
 export function attachReplicationStatus(
   replications: SyncReplicationState[],
   store = createSyncStatusStore({
@@ -124,25 +156,19 @@ export function attachReplicationStatus(
     }),
   ]);
 
-  function handleOffline() {
-    store.setOffline();
-  }
-
-  function handleOnline() {
-    store.setSyncing();
-    replications.forEach((replication) => {
-      void replication.start?.();
-    });
-  }
-
-  window.addEventListener('offline', handleOffline);
-  window.addEventListener('online', handleOnline);
+  const connectivity = attachConnectivityStatus(store, {
+    onOnline: () => {
+      store.setSyncing();
+      replications.forEach((replication) => {
+        void replication.start?.();
+      });
+    },
+  });
 
   return {
     cancel: () => {
       subscriptions.forEach((subscription) => subscription.unsubscribe());
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
+      connectivity.cancel();
       replications.forEach((replication) => {
         void replication.cancel();
       });

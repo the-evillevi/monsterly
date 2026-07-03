@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { closeMonsterlyDatabase, getMonsterlyDatabase } from '@/lib/local-db/monsterly-db';
 
-import { createSupabaseReplications, createSyncStatusStore } from './supabase-sync';
+import {
+  attachConnectivityStatus,
+  createSupabaseReplications,
+  createSyncStatusStore,
+} from './supabase-sync';
 import type { SyncReplicationFactoryCall } from './types';
 
 describe('Supabase organization sync', () => {
@@ -79,6 +83,40 @@ describe('Supabase organization sync', () => {
       error: 'RLS rejected organization',
       phase: 'error',
     });
+  });
+
+  it('honors an initial offline snapshot', () => {
+    const store = createSyncStatusStore({ isOnline: false, phase: 'offline' });
+
+    expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: false, phase: 'offline' });
+  });
+
+  it('tracks local-only mode without clobbering connectivity', () => {
+    const store = createSyncStatusStore();
+
+    store.setLocal();
+    expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: true, phase: 'local' });
+
+    store.setOffline();
+    store.setLocal();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'local' });
+  });
+
+  it('reacts to window connectivity events', () => {
+    const store = createSyncStatusStore();
+    const onOnline = vi.fn(() => store.setLocal());
+    const connectivity = attachConnectivityStatus(store, { onOnline });
+
+    window.dispatchEvent(new Event('offline'));
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    window.dispatchEvent(new Event('online'));
+    expect(onOnline).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot()).toMatchObject({ phase: 'local' });
+
+    connectivity.cancel();
+    window.dispatchEvent(new Event('offline'));
+    expect(store.getSnapshot()).toMatchObject({ phase: 'local' });
   });
 });
 
