@@ -16,5 +16,9 @@ export function SyncStatus() {
     return <Badge variant="destructive">Sync error</Badge>;
   }
 
+  if (status.phase === 'local') {
+    return <Badge variant="outline">Local only</Badge>;
+  }
+
   return <Badge variant="outline">Syncing</Badge>;
 }

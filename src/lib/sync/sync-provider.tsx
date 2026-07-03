@@ -4,6 +4,7 @@ import { DataLayerContext, isDemoOrganizationId } from '@/lib/data/data-layer-co
 import { getSupabaseClient, hasSupabaseConfig } from '@/lib/supabase';
 
 import {
+  attachConnectivityStatus,
   attachReplicationStatus,
   createSupabaseReplications,
   createSyncStatusStore,
@@ -11,12 +12,29 @@ import {
 import { SyncStatusContext } from './sync-context';
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const store = useMemo(() => createSyncStatusStore(), []);
+  const store = useMemo(
+    () =>
+      createSyncStatusStore({
+        isOnline: navigator.onLine,
+        phase: navigator.onLine ? 'idle' : 'offline',
+      }),
+    [],
+  );
   const { activeOrganizationId, db } = useContext(DataLayerContext);
 
   useEffect(() => {
     if (!db || !hasSupabaseConfig() || isDemoOrganizationId(activeOrganizationId)) {
-      return;
+      if (store.getSnapshot().isOnline) {
+        store.setLocal();
+      }
+
+      const connectivity = attachConnectivityStatus(store, {
+        onOnline: () => store.setLocal(),
+      });
+
+      return () => {
+        connectivity.cancel();
+      };
     }
 
     const replications = createSupabaseReplications({
