@@ -22,7 +22,11 @@ vi.mock('@/lib/supabase', async (importOriginal) => {
 
   return {
     ...actual,
-    getSupabaseClient: vi.fn(() => ({})),
+    getSupabaseClient: vi.fn(() => {
+      const channelStub = { subscribe: vi.fn(() => channelStub) };
+
+      return { channel: vi.fn(() => channelStub), removeChannel: vi.fn() };
+    }),
   };
 });
 

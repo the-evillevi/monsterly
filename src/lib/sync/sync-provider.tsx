@@ -35,12 +35,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       };
     }
 
+    const client = getSupabaseClient();
     const replications = createSupabaseReplications({
       activeOrganizationId,
-      client: getSupabaseClient(),
+      client,
       db,
     });
-    const status = attachReplicationStatus(replications, store);
+    const status = attachReplicationStatus(replications, store, client);
 
     return () => {
       status.cancel();

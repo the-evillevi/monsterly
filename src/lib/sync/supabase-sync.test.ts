@@ -137,6 +137,40 @@ describe('Supabase organization sync', () => {
     expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'local' });
   });
 
+  it('surfaces realtime channel failures as sync errors and recovers', () => {
+    const replications = [createReplicationStateStub()];
+    let channelStatus: ((status: string) => void) | undefined;
+    const removeChannel = vi.fn();
+    const channelStub = {
+      subscribe: (callback: (status: string) => void) => {
+        channelStatus = callback;
+        return channelStub;
+      },
+    };
+    const client = { channel: vi.fn(() => channelStub), removeChannel } as never;
+    const status = attachReplicationStatus(replications, createSyncStatusStore(), client);
+
+    channelStatus?.('SUBSCRIBED');
+    expect(status.store.getSnapshot()).toMatchObject({ error: null, phase: 'idle' });
+    expect(replications[0]?.reSync).not.toHaveBeenCalled();
+
+    channelStatus?.('CHANNEL_ERROR');
+    expect(status.store.getSnapshot()).toMatchObject({
+      error: 'Lost connection to the sync server.',
+      phase: 'error',
+    });
+
+    channelStatus?.('SUBSCRIBED');
+    expect(status.store.getSnapshot()).toMatchObject({ error: null, phase: 'syncing' });
+    expect(replications[0]?.reSync).toHaveBeenCalledTimes(1);
+
+    status.cancel();
+    expect(removeChannel).toHaveBeenCalledTimes(1);
+
+    channelStatus?.('CHANNEL_ERROR');
+    expect(status.store.getSnapshot()).toMatchObject({ error: null, phase: 'syncing' });
+  });
+
   it('resyncs live replications when connectivity returns instead of restarting them', () => {
     const replications = [createReplicationStateStub(), createReplicationStateStub()];
     const status = attachReplicationStatus(replications, createSyncStatusStore());
