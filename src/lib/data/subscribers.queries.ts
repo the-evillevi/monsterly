@@ -1,12 +1,34 @@
 import type { Observable } from 'rxjs';
 import { combineLatest, map } from 'rxjs';
 
-import type { SubscriberDocument } from '@/lib/local-db/monsterly-db';
+import type { SubscriberDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
 import type { DataModuleContext } from './data-layer-context';
 import type { SubscriberWithSubscriptions } from './subscriber-types';
 import { listSubscriptions, watchSubscriptions } from './subscriptions.queries';
 import { activeRecordSelector } from './active-records';
+
+function joinSubscriptions(
+  subscribers: SubscriberDocument[],
+  subscriptions: SubscriptionDocument[],
+): SubscriberWithSubscriptions[] {
+  const subscriptionsBySubscriber = new Map<string, SubscriptionDocument[]>();
+
+  for (const subscription of subscriptions) {
+    const existing = subscriptionsBySubscriber.get(subscription.subscriber_id);
+
+    if (existing) {
+      existing.push(subscription);
+    } else {
+      subscriptionsBySubscriber.set(subscription.subscriber_id, [subscription]);
+    }
+  }
+
+  return subscribers.map((subscriber) => ({
+    ...subscriber,
+    subscriptions: subscriptionsBySubscriber.get(subscriber.id) ?? [],
+  }));
+}
 
 export function watchSubscribers(
   context: DataModuleContext,
@@ -21,14 +43,7 @@ export function watchSubscribers(
     .$.pipe(map((documents) => documents.map((document) => document.toJSON())));
 
   return combineLatest([subscribers$, watchSubscriptions(context)]).pipe(
-    map(([subscribers, subscriptions]) =>
-      subscribers.map((subscriber) => ({
-        ...subscriber,
-        subscriptions: subscriptions.filter(
-          (subscription) => subscription.subscriber_id === subscriber.id,
-        ),
-      })),
-    ),
+    map(([subscribers, subscriptions]) => joinSubscriptions(subscribers, subscriptions)),
   );
 }
 
@@ -60,10 +75,5 @@ export async function listSubscribers({
     document.toJSON(),
   );
 
-  return subscribers.map((subscriber) => ({
-    ...subscriber,
-    subscriptions: subscriptions.filter(
-      (subscription) => subscription.subscriber_id === subscriber.id,
-    ),
-  }));
+  return joinSubscriptions(subscribers, subscriptions);
 }

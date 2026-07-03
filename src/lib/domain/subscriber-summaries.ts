@@ -1,5 +1,7 @@
 export type SubscriptionStatus = 'Al corriente' | 'Por vencer' | 'Vencido';
 
+export type SubscriberStatus = SubscriptionStatus | 'Sin suscripción';
+
 type SubscriberSummarySource = {
   id: string;
   name: string;
@@ -14,10 +16,10 @@ type SubscriptionSummarySource = {
 export type SubscriberSummary = {
   id: string;
   name: string;
-  paidUntilDate: string;
+  paidUntilDate?: string;
   paidUntilLabel: string;
   plan: string;
-  status: SubscriptionStatus;
+  status: SubscriberStatus;
 };
 
 const warningWindowDays = 3;
@@ -51,7 +53,11 @@ export function buildSubscriberSummaries({
 function getSubscriberStatus(
   subscriptions: SubscriptionSummarySource[],
   today: Date,
-): SubscriptionStatus {
+): SubscriberStatus {
+  if (subscriptions.length === 0) {
+    return 'Sin suscripción';
+  }
+
   const statuses = subscriptions.map((subscription) =>
     getSubscriptionStatus(subscription.paid_until_date, today),
   );
@@ -88,7 +94,7 @@ function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function getLatestPaidUntilDate(subscriptions: SubscriptionSummarySource[]) {
+function getLatestPaidUntilDate(subscriptions: SubscriptionSummarySource[]): string | undefined {
   return subscriptions
     .map((subscription) => subscription.paid_until_date)
     .sort((left, right) => right.localeCompare(left))[0];
@@ -96,7 +102,7 @@ function getLatestPaidUntilDate(subscriptions: SubscriptionSummarySource[]) {
 
 function formatPaidUntilLabel(paidUntilDate?: string) {
   if (!paidUntilDate) {
-    return 'No subscription';
+    return 'Sin suscripción';
   }
 
   const date = new Date(`${paidUntilDate}T00:00:00`);
@@ -122,5 +128,5 @@ function formatPlan(subscriptions: SubscriptionSummarySource[]) {
     return 'Gym';
   }
 
-  return 'No subscription';
+  return 'Sin suscripción';
 }

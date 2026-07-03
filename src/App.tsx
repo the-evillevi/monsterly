@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SyncStatus } from '@/components/sync-status';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
+import { cn } from '@/lib/utils';
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard' },
@@ -146,9 +147,11 @@ function SubscriberList({ filterStatus }: SubscriberListProps) {
             </div>
             <div className="grid gap-2 sm:justify-items-end">
               <Badge variant="outline">{subscriber.status}</Badge>
-              <time className="text-sm text-muted-foreground" dateTime={subscriber.paidUntilDate}>
-                Paid until {subscriber.paidUntilLabel}
-              </time>
+              {subscriber.paidUntilDate ? (
+                <time className="text-sm text-muted-foreground" dateTime={subscriber.paidUntilDate}>
+                  Paid until {subscriber.paidUntilLabel}
+                </time>
+              ) : null}
             </div>
           </article>
         </Card>
@@ -174,12 +177,10 @@ function App() {
             {navItems.map((item) => (
               <NavLink
                 className={({ isActive }) =>
-                  [
+                  cn(
                     'min-h-11 shrink-0 rounded-md px-3 py-2 font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground',
-                    isActive ? 'bg-secondary text-foreground' : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' ')
+                    isActive && 'bg-secondary text-foreground',
+                  )
                 }
                 key={item.path}
                 to={item.path}

@@ -50,6 +50,10 @@ describe('SyncProvider', () => {
   });
 
   it('does not start replication without Supabase configuration', () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '');
+    vi.stubEnv('VITE_MONSTERLY_ORGANIZATION_ID', '');
+
     renderSyncProvider(organizationUuid);
 
     expect(createSupabaseReplications).not.toHaveBeenCalled();

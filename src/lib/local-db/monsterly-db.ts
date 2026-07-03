@@ -190,10 +190,18 @@ type GetMonsterlyDatabaseOptions = {
 };
 
 let databasePromise: Promise<MonsterlyDatabase> | undefined;
+let databaseName: string | undefined;
 
 export async function getMonsterlyDatabase({
   name = 'monsterly',
 }: GetMonsterlyDatabaseOptions = {}): Promise<MonsterlyDatabase> {
+  if (databasePromise && databaseName !== name) {
+    throw new Error(
+      `Local database is already open as "${databaseName}"; close it before opening "${name}".`,
+    );
+  }
+
+  databaseName = name;
   databasePromise ??= createMonsterlyDatabase(name);
 
   return databasePromise;
@@ -202,6 +210,7 @@ export async function getMonsterlyDatabase({
 export async function closeMonsterlyDatabase() {
   const database = await databasePromise;
   databasePromise = undefined;
+  databaseName = undefined;
 
   await database?.remove();
 }

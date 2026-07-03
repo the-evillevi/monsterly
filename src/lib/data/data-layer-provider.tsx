@@ -31,7 +31,9 @@ export function DataLayerProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    void loadDatabase();
+    loadDatabase().catch((error: unknown) => {
+      console.error('Failed to initialize the local database.', error);
+    });
 
     return () => {
       isMounted = false;
