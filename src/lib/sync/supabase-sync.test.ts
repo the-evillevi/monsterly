@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { closeMonsterlyDatabase, getMonsterlyDatabase } from '@/lib/local-db/monsterly-db';
 
-import { createSupabaseReplications, createSyncStatusStore } from './supabase-sync';
+import {
+  attachConnectivityStatus,
+  attachReplicationStatus,
+  createSupabaseReplications,
+  createSyncStatusStore,
+} from './supabase-sync';
 import type { SyncReplicationFactoryCall } from './types';
 
 describe('Supabase organization sync', () => {
@@ -71,6 +76,7 @@ describe('Supabase organization sync', () => {
     store.setOffline();
     expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
 
+    store.setOnline();
     store.setSyncing();
     expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'syncing' });
 
@@ -79,6 +85,121 @@ describe('Supabase organization sync', () => {
       error: 'RLS rejected organization',
       phase: 'error',
     });
+  });
+
+  it('keeps the offline phase while disconnected regardless of sync events', () => {
+    const store = createSyncStatusStore();
+
+    store.setOffline();
+
+    store.setSyncing();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    store.setIdle();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    store.setError(new Error('fetch failed'));
+    expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: false, phase: 'offline' });
+
+    store.setLocal();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+  });
+
+  it('skips listener notifications when the snapshot does not change', () => {
+    const store = createSyncStatusStore();
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    store.setSyncing();
+    store.setSyncing();
+    store.setSyncing();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('honors an initial offline snapshot', () => {
+    const store = createSyncStatusStore({ isOnline: false, phase: 'offline' });
+
+    expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: false, phase: 'offline' });
+  });
+
+  it('tracks local-only mode and resumes it after reconnecting', () => {
+    const store = createSyncStatusStore();
+
+    store.setLocal();
+    expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: true, phase: 'local' });
+
+    store.setOffline();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    store.setOnline();
+    store.setLocal();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'local' });
+  });
+
+  it('surfaces realtime channel failures as sync errors and recovers', () => {
+    const replications = [createReplicationStateStub()];
+    let channelStatus: ((status: string) => void) | undefined;
+    const removeChannel = vi.fn();
+    const channelStub = {
+      subscribe: (callback: (status: string) => void) => {
+        channelStatus = callback;
+        return channelStub;
+      },
+    };
+    const client = { channel: vi.fn(() => channelStub), removeChannel } as never;
+    const status = attachReplicationStatus(replications, createSyncStatusStore(), client);
+
+    channelStatus?.('SUBSCRIBED');
+    expect(status.store.getSnapshot()).toMatchObject({ error: null, phase: 'idle' });
+    expect(replications[0]?.reSync).not.toHaveBeenCalled();
+
+    channelStatus?.('CHANNEL_ERROR');
+    expect(status.store.getSnapshot()).toMatchObject({
+      error: 'Lost connection to the sync server.',
+      phase: 'error',
+    });
+
+    channelStatus?.('SUBSCRIBED');
+    expect(status.store.getSnapshot()).toMatchObject({ error: null, phase: 'syncing' });
+    expect(replications[0]?.reSync).toHaveBeenCalledTimes(1);
+
+    status.cancel();
+    expect(removeChannel).toHaveBeenCalledTimes(1);
+
+    channelStatus?.('CHANNEL_ERROR');
+    expect(status.store.getSnapshot()).toMatchObject({ error: null, phase: 'syncing' });
+  });
+
+  it('resyncs live replications when connectivity returns instead of restarting them', () => {
+    const replications = [createReplicationStateStub(), createReplicationStateStub()];
+    const status = attachReplicationStatus(replications, createSyncStatusStore());
+
+    window.dispatchEvent(new Event('online'));
+
+    for (const replication of replications) {
+      expect(replication.reSync).toHaveBeenCalledTimes(1);
+    }
+    expect(status.store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'syncing' });
+
+    status.cancel();
+  });
+
+  it('reacts to window connectivity events', () => {
+    const store = createSyncStatusStore();
+    const onOnline = vi.fn(() => store.setLocal());
+    const connectivity = attachConnectivityStatus(store, { onOnline });
+
+    window.dispatchEvent(new Event('offline'));
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    window.dispatchEvent(new Event('online'));
+    expect(onOnline).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'local' });
+
+    connectivity.cancel();
+    window.dispatchEvent(new Event('offline'));
+    expect(store.getSnapshot()).toMatchObject({ phase: 'local' });
   });
 });
 
@@ -91,7 +212,7 @@ function createReplicationStateStub() {
     active$: { subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })) },
     cancel: vi.fn(),
     error$: { subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })) },
-    start: vi.fn(),
+    reSync: vi.fn(),
   };
 }
 

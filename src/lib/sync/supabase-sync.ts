@@ -61,13 +61,27 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
   const listeners = new Set<() => void>();
 
   function emit(nextSnapshot: SyncStatusSnapshot) {
+    if (
+      nextSnapshot.error === snapshot.error &&
+      nextSnapshot.isOnline === snapshot.isOnline &&
+      nextSnapshot.phase === snapshot.phase
+    ) {
+      return;
+    }
+
     snapshot = nextSnapshot;
     listeners.forEach((listener) => listener());
   }
 
+  // Offline wins: while isOnline is false the snapshot stays offline-shaped.
+  // Phase transitions resume after setOnline (driven by connectivity events).
   return {
     getSnapshot: () => snapshot,
     setError: (error: unknown) => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
       emit({
         error: error instanceof Error ? error.message : 'Sync failed',
         isOnline: snapshot.isOnline,
@@ -75,10 +89,25 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
       });
     },
     setIdle: () => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
       emit({
         error: null,
-        isOnline: true,
+        isOnline: snapshot.isOnline,
         phase: 'idle',
+      });
+    },
+    setLocal: () => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
+      emit({
+        error: null,
+        isOnline: snapshot.isOnline,
+        phase: 'local',
       });
     },
     setOffline: () => {
@@ -88,10 +117,20 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
         phase: 'offline',
       });
     },
+    setOnline: () => {
+      emit({
+        ...snapshot,
+        isOnline: true,
+      });
+    },
     setSyncing: () => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
       emit({
         error: null,
-        isOnline: true,
+        isOnline: snapshot.isOnline,
         phase: 'syncing',
       });
     },
@@ -105,11 +144,40 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
   };
 }
 
+export type SyncStatusStore = ReturnType<typeof createSyncStatusStore>;
+
+export function attachConnectivityStatus(
+  store: SyncStatusStore,
+  { onOnline }: { onOnline: () => void },
+) {
+  function handleOffline() {
+    store.setOffline();
+  }
+
+  function handleOnline() {
+    store.setOnline();
+    onOnline();
+  }
+
+  window.addEventListener('offline', handleOffline);
+  window.addEventListener('online', handleOnline);
+
+  return {
+    cancel: () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    },
+  };
+}
+
+const channelFailureStatuses = new Set(['CHANNEL_ERROR', 'CLOSED', 'TIMED_OUT']);
+
 export function attachReplicationStatus(
   replications: SyncReplicationState[],
   store = createSyncStatusStore({
     isOnline: typeof navigator === 'undefined' ? true : navigator.onLine,
   }),
+  client?: SupabaseClient,
 ) {
   const subscriptions = replications.flatMap((replication) => [
     replication.active$.subscribe((isActive: boolean) => {
@@ -124,25 +192,56 @@ export function attachReplicationStatus(
     }),
   ]);
 
-  function handleOffline() {
-    store.setOffline();
-  }
-
-  function handleOnline() {
+  function resumeReplications() {
     store.setSyncing();
     replications.forEach((replication) => {
-      void replication.start?.();
+      // reSync, not start: the replication is already live and its Supabase
+      // Realtime channel is subscribed; start() would re-add postgres_changes
+      // callbacks after subscribe(), which supabase-js rejects.
+      replication.reSync?.();
     });
   }
 
-  window.addEventListener('offline', handleOffline);
-  window.addEventListener('online', handleOnline);
+  const connectivity = attachConnectivityStatus(store, {
+    onOnline: resumeReplications,
+  });
+
+  /**
+   * RxDB only reports errors when a push or pull actually runs, so an idle
+   * app never notices a dead sync server. A dedicated Realtime channel does:
+   * its subscribe callback reports CHANNEL_ERROR within seconds of the
+   * connection dropping and SUBSCRIBED again once the socket auto-recovers.
+   */
+  let realtimeHealthy = true;
+  let cancelled = false;
+  const statusChannel = client?.channel('monsterly-sync-health').subscribe((channelStatus) => {
+    if (cancelled) {
+      return;
+    }
+
+    if (channelStatus === 'SUBSCRIBED') {
+      if (!realtimeHealthy) {
+        realtimeHealthy = true;
+        resumeReplications();
+      }
+
+      return;
+    }
+
+    if (channelFailureStatuses.has(channelStatus)) {
+      realtimeHealthy = false;
+      store.setError(new Error('Lost connection to the sync server.'));
+    }
+  });
 
   return {
     cancel: () => {
+      cancelled = true;
       subscriptions.forEach((subscription) => subscription.unsubscribe());
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
+      connectivity.cancel();
+      if (client && statusChannel) {
+        void client.removeChannel(statusChannel);
+      }
       replications.forEach((replication) => {
         void replication.cancel();
       });

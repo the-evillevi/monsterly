@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { MonsterlyDatabase } from '@/lib/local-db/monsterly-db';
 
-export type SyncPhase = 'idle' | 'syncing' | 'offline' | 'error';
+export type SyncPhase = 'idle' | 'syncing' | 'offline' | 'error' | 'local';
 
 export type SyncStatusSnapshot = {
   error: string | null;
@@ -22,7 +22,7 @@ export type SyncReplicationState = {
   active$: SyncObservable<boolean>;
   cancel: () => unknown;
   error$: SyncObservable<unknown>;
-  start?: () => unknown;
+  reSync?: () => void;
 };
 
 export type SyncReplicationFactoryCall = {

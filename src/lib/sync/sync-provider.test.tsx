@@ -1,6 +1,7 @@
-import { render } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { SyncStatus } from '@/components/sync-status';
 import { DataLayerContext, demoOrganizationId } from '@/lib/data/data-layer-context';
 import type { MonsterlyDatabase } from '@/lib/local-db/monsterly-db';
 
@@ -21,7 +22,11 @@ vi.mock('@/lib/supabase', async (importOriginal) => {
 
   return {
     ...actual,
-    getSupabaseClient: vi.fn(() => ({})),
+    getSupabaseClient: vi.fn(() => {
+      const channelStub = { subscribe: vi.fn(() => channelStub) };
+
+      return { channel: vi.fn(() => channelStub), removeChannel: vi.fn() };
+    }),
   };
 });
 
@@ -31,7 +36,7 @@ function renderSyncProvider(activeOrganizationId: string) {
   return render(
     <DataLayerContext.Provider value={{ activeOrganizationId, db: {} as MonsterlyDatabase }}>
       <SyncProvider>
-        <span>content</span>
+        <SyncStatus />
       </SyncProvider>
     </DataLayerContext.Provider>,
   );
@@ -47,6 +52,7 @@ describe('SyncProvider', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('does not start replication without Supabase configuration', () => {
@@ -76,5 +82,36 @@ describe('SyncProvider', () => {
     expect(createSupabaseReplications).toHaveBeenCalledWith(
       expect.objectContaining({ activeOrganizationId: organizationUuid }),
     );
+  });
+
+  it('shows local-only mode instead of synced when replication is not configured', () => {
+    renderSyncProvider(demoOrganizationId);
+
+    expect(screen.getByText('Local only')).toBeInTheDocument();
+    expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+  });
+
+  it('shows offline immediately when launched without connectivity', () => {
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+
+    renderSyncProvider(demoOrganizationId);
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+  });
+
+  it('flips between offline and local-only as connectivity changes', () => {
+    renderSyncProvider(demoOrganizationId);
+
+    expect(screen.getByText('Local only')).toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new Event('offline'));
+    });
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+    expect(screen.getByText('Local only')).toBeInTheDocument();
   });
 });
