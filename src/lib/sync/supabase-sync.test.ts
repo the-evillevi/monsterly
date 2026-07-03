@@ -75,6 +75,7 @@ describe('Supabase organization sync', () => {
     store.setOffline();
     expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
 
+    store.setOnline();
     store.setSyncing();
     expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'syncing' });
 
@@ -85,21 +86,54 @@ describe('Supabase organization sync', () => {
     });
   });
 
+  it('keeps the offline phase while disconnected regardless of sync events', () => {
+    const store = createSyncStatusStore();
+
+    store.setOffline();
+
+    store.setSyncing();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    store.setIdle();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    store.setError(new Error('fetch failed'));
+    expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: false, phase: 'offline' });
+
+    store.setLocal();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+  });
+
+  it('skips listener notifications when the snapshot does not change', () => {
+    const store = createSyncStatusStore();
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    store.setSyncing();
+    store.setSyncing();
+    store.setSyncing();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it('honors an initial offline snapshot', () => {
     const store = createSyncStatusStore({ isOnline: false, phase: 'offline' });
 
     expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: false, phase: 'offline' });
   });
 
-  it('tracks local-only mode without clobbering connectivity', () => {
+  it('tracks local-only mode and resumes it after reconnecting', () => {
     const store = createSyncStatusStore();
 
     store.setLocal();
     expect(store.getSnapshot()).toMatchObject({ error: null, isOnline: true, phase: 'local' });
 
     store.setOffline();
+    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'offline' });
+
+    store.setOnline();
     store.setLocal();
-    expect(store.getSnapshot()).toMatchObject({ isOnline: false, phase: 'local' });
+    expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'local' });
   });
 
   it('reacts to window connectivity events', () => {
@@ -112,7 +146,7 @@ describe('Supabase organization sync', () => {
 
     window.dispatchEvent(new Event('online'));
     expect(onOnline).toHaveBeenCalledTimes(1);
-    expect(store.getSnapshot()).toMatchObject({ phase: 'local' });
+    expect(store.getSnapshot()).toMatchObject({ isOnline: true, phase: 'local' });
 
     connectivity.cancel();
     window.dispatchEvent(new Event('offline'));

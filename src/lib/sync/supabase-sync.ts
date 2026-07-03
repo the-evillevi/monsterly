@@ -61,13 +61,27 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
   const listeners = new Set<() => void>();
 
   function emit(nextSnapshot: SyncStatusSnapshot) {
+    if (
+      nextSnapshot.error === snapshot.error &&
+      nextSnapshot.isOnline === snapshot.isOnline &&
+      nextSnapshot.phase === snapshot.phase
+    ) {
+      return;
+    }
+
     snapshot = nextSnapshot;
     listeners.forEach((listener) => listener());
   }
 
+  // Offline wins: while isOnline is false the snapshot stays offline-shaped.
+  // Phase transitions resume after setOnline (driven by connectivity events).
   return {
     getSnapshot: () => snapshot,
     setError: (error: unknown) => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
       emit({
         error: error instanceof Error ? error.message : 'Sync failed',
         isOnline: snapshot.isOnline,
@@ -75,13 +89,21 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
       });
     },
     setIdle: () => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
       emit({
         error: null,
-        isOnline: true,
+        isOnline: snapshot.isOnline,
         phase: 'idle',
       });
     },
     setLocal: () => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
       emit({
         error: null,
         isOnline: snapshot.isOnline,
@@ -95,10 +117,20 @@ export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapsh
         phase: 'offline',
       });
     },
+    setOnline: () => {
+      emit({
+        ...snapshot,
+        isOnline: true,
+      });
+    },
     setSyncing: () => {
+      if (!snapshot.isOnline) {
+        return;
+      }
+
       emit({
         error: null,
-        isOnline: true,
+        isOnline: snapshot.isOnline,
         phase: 'syncing',
       });
     },
@@ -123,6 +155,7 @@ export function attachConnectivityStatus(
   }
 
   function handleOnline() {
+    store.setOnline();
     onOnline();
   }
 

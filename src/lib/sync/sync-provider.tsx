@@ -24,9 +24,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!db || !hasSupabaseConfig() || isDemoOrganizationId(activeOrganizationId)) {
-      if (store.getSnapshot().isOnline) {
-        store.setLocal();
-      }
+      store.setLocal();
 
       const connectivity = attachConnectivityStatus(store, {
         onOnline: () => store.setLocal(),
