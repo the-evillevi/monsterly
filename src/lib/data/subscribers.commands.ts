@@ -4,7 +4,7 @@ import type { DataModuleContext } from './data-layer-context';
 
 export type SaveSubscriberInput = {
   gender?: SubscriberDocument['gender'];
-  id: string;
+  id?: string;
   name: string;
   phone_number?: string;
 };
@@ -13,11 +13,12 @@ export async function saveSubscriber(
   { activeOrganizationId, db }: DataModuleContext,
   input: SaveSubscriberInput,
 ) {
+  const id = input.id ?? crypto.randomUUID();
   const now = new Date().toISOString();
   const existing = await db.subscribers
     .findOne({
       selector: {
-        id: input.id,
+        id,
         organization_id: activeOrganizationId,
       },
     })
@@ -26,7 +27,7 @@ export async function saveSubscriber(
     _deleted: false,
     _modified: now,
     gender: input.gender ?? 'unspecified',
-    id: input.id,
+    id,
     name: input.name,
     organization_id: activeOrganizationId,
     phone_number: input.phone_number,

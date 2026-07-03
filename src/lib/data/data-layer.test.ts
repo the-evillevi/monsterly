@@ -408,6 +408,17 @@ describe('RxDB data layer', () => {
     );
   });
 
+  it('generates a subscriber id when none is provided', async () => {
+    const context = await createTestContext('organization-1');
+
+    const created = await saveSubscriber(context, { name: 'Ana Torres' });
+
+    expect(created.id).toBeTruthy();
+    await expect(listSubscribers(context)).resolves.toMatchObject([
+      { id: created.id, name: 'Ana Torres' },
+    ]);
+  });
+
   it('skips demo seeding when a sync organization is active', async () => {
     const syncContext = await createTestContext('3f2504e0-4f89-41d3-9a0c-0305e82c3301');
 
