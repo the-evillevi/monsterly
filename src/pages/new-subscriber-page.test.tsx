@@ -58,6 +58,21 @@ describe('NewSubscriberPage', () => {
     ]);
   });
 
+  it('rejects incomplete phone numbers and saves nothing', async () => {
+    const context = await renderNewSubscriberPage();
+
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Levi Carbellido' } });
+    fireEvent.change(screen.getByLabelText('Teléfono (opcional)'), {
+      target: { value: '55 7207' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(
+      await screen.findByText('Ingresa un teléfono válido de al menos 10 dígitos.'),
+    ).toBeInTheDocument();
+    await expect(listSubscribers(context)).resolves.toEqual([]);
+  });
+
   it('saves without a phone number when the field is left empty', async () => {
     const context = await renderNewSubscriberPage();
 

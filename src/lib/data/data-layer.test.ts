@@ -419,6 +419,17 @@ describe('RxDB data layer', () => {
     ]);
   });
 
+  it('rejects phone numbers outside 10 to 15 digits', async () => {
+    const context = await createTestContext('organization-1');
+
+    await expect(
+      saveSubscriber(context, { name: 'Levi Carbellido', phone_number: '55 7207' }),
+    ).rejects.toThrow('Subscriber phone number must have 10 to 15 digits.');
+    await expect(
+      saveSubscriber(context, { name: 'Levi Carbellido', phone_number: '+52 55 7207 0000' }),
+    ).resolves.toMatchObject({ phone_number: '+52 55 7207 0000' });
+  });
+
   it('rejects empty subscriber names', async () => {
     const context = await createTestContext('organization-1');
 
