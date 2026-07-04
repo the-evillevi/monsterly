@@ -43,7 +43,9 @@ export async function saveSubscriber(
     id,
     name,
     organization_id: activeOrganizationId,
-    phone_number: input.phone_number,
+    // null, not undefined: an undefined field in incrementalPatch leaves the
+    // stored value untouched, so clearing a phone number would silently no-op.
+    phone_number: input.phone_number ?? null,
     updated_at: now,
   };
 
