@@ -1,12 +1,26 @@
-import { type FormEvent, type ReactNode, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { type ReactNode, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { isValidPhoneNumber } from '@/lib/domain/phone-number';
 import { type SubscriberGender, subscriberGenders } from '@/lib/local-db/monsterly-db';
+
+const subscriberFormSchema = z.object({
+  gender: z.enum(subscriberGenders),
+  name: z.string().trim().min(1, 'El nombre es obligatorio.'),
+  phone_number: z.union([
+    z.literal(''),
+    z.string().refine(isValidPhoneNumber, 'Ingresa un teléfono válido de al menos 10 dígitos.'),
+  ]),
+});
+
+type SubscriberFormSchema = z.infer<typeof subscriberFormSchema>;
 
 export type SubscriberFormValues = {
   gender: SubscriberGender;
@@ -28,120 +42,85 @@ const genderLabels: Record<SubscriberGender, string> = {
   unspecified: 'Prefiero no decir',
 };
 
-function toGender(value: FormDataEntryValue | null): SubscriberGender {
-  return subscriberGenders.find((gender) => gender === value) ?? 'unspecified';
-}
-
 export function SubscriberForm({
   defaultValues,
   footer,
   onSubmit,
   submitLabel,
 }: SubscriberFormProps) {
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const form = useForm<SubscriberFormSchema>({
+    defaultValues: {
+      gender: defaultValues?.gender ?? 'unspecified',
+      name: defaultValues?.name ?? '',
+      phone_number: defaultValues?.phone_number ?? '',
+    },
+    resolver: zodResolver(subscriberFormSchema),
+  });
+  const { errors, isSubmitting } = form.formState;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const name = String(formData.get('name') ?? '').trim();
-    const phoneNumber = String(formData.get('phone_number') ?? '').trim();
-
-    if (!name) {
-      setNameError('El nombre es obligatorio.');
-      return;
-    }
-
-    setNameError(null);
-
-    if (phoneNumber && !isValidPhoneNumber(phoneNumber)) {
-      setPhoneError('Ingresa un teléfono válido de al menos 10 dígitos.');
-      return;
-    }
-
-    setPhoneError(null);
+  async function handleSubmit(values: SubscriberFormSchema) {
     setSubmitError(null);
-    setIsSaving(true);
 
     try {
       await onSubmit({
-        gender: toGender(formData.get('gender')),
-        name,
-        phone_number: phoneNumber || undefined,
+        gender: values.gender,
+        name: values.name,
+        phone_number: values.phone_number || undefined,
       });
     } catch (error) {
       console.error('Failed to save the subscriber.', error);
       setSubmitError('No se pudieron guardar los cambios. Intenta de nuevo.');
-    } finally {
-      setIsSaving(false);
     }
   }
 
   return (
-    <form className="grid max-w-md gap-5" noValidate onSubmit={handleSubmit}>
-      <div className="grid gap-2">
-        <Label htmlFor="subscriber-name">Nombre</Label>
-        <Input
-          aria-describedby={nameError ? 'subscriber-name-error' : undefined}
-          aria-invalid={nameError ? true : undefined}
-          defaultValue={defaultValues?.name}
-          id="subscriber-name"
-          name="name"
-        />
-        {nameError ? (
-          <p className="text-sm text-destructive" id="subscriber-name-error">
-            {nameError}
-          </p>
-        ) : null}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="subscriber-gender">Género</Label>
-        <Select
-          defaultValue={defaultValues?.gender ?? 'unspecified'}
-          id="subscriber-gender"
-          name="gender"
-        >
-          {subscriberGenders.map((gender) => (
-            <option key={gender} value={gender}>
-              {genderLabels[gender]}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="subscriber-phone">Teléfono (opcional)</Label>
-        <Input
-          aria-describedby={phoneError ? 'subscriber-phone-error' : undefined}
-          aria-invalid={phoneError ? true : undefined}
-          autoComplete="tel"
-          defaultValue={defaultValues?.phone_number}
-          id="subscriber-phone"
-          inputMode="tel"
-          name="phone_number"
-          type="tel"
-        />
-        {phoneError ? (
-          <p className="text-sm text-destructive" id="subscriber-phone-error">
-            {phoneError}
-          </p>
-        ) : null}
-      </div>
-      {submitError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {submitError}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        <Button disabled={isSaving} type="submit">
-          {submitLabel}
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/subscribers">Cancelar</Link>
-        </Button>
-      </div>
-      {footer}
+    <form className="w-full max-w-sm" noValidate onSubmit={form.handleSubmit(handleSubmit)}>
+      <FieldGroup>
+        <Field data-invalid={errors.name ? true : undefined}>
+          <FieldLabel htmlFor="subscriber-name">Nombre</FieldLabel>
+          <Input
+            aria-invalid={errors.name ? true : undefined}
+            id="subscriber-name"
+            type="text"
+            {...form.register('name')}
+          />
+          <FieldError>{errors.name?.message}</FieldError>
+        </Field>
+        <Field data-invalid={errors.gender ? true : undefined}>
+          <FieldLabel htmlFor="subscriber-gender">Género</FieldLabel>
+          <Select id="subscriber-gender" {...form.register('gender')}>
+            {subscriberGenders.map((gender) => (
+              <option key={gender} value={gender}>
+                {genderLabels[gender]}
+              </option>
+            ))}
+          </Select>
+          <FieldError>{errors.gender?.message}</FieldError>
+        </Field>
+        <Field data-invalid={errors.phone_number ? true : undefined}>
+          <FieldLabel htmlFor="subscriber-phone">Teléfono (opcional)</FieldLabel>
+          <Input
+            aria-invalid={errors.phone_number ? true : undefined}
+            autoComplete="tel"
+            id="subscriber-phone"
+            inputMode="tel"
+            type="tel"
+            {...form.register('phone_number')}
+          />
+          <FieldError>{errors.phone_number?.message}</FieldError>
+        </Field>
+        <FieldError>{submitError}</FieldError>
+        <Field orientation="horizontal">
+          <Button asChild variant="outline">
+            <Link to="/subscribers">Cancelar</Link>
+          </Button>
+          <Button disabled={isSubmitting} type="submit">
+            {submitLabel}
+          </Button>
+        </Field>
+        {footer}
+      </FieldGroup>
     </form>
   );
 }
