@@ -144,7 +144,7 @@ export type SubscriberDocument = {
   id: string;
   name: string;
   organization_id: string;
-  phone_number?: string;
+  phone_number?: string | null;
   updated_at: string;
 };
 

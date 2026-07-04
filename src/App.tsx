@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageFrame } from '@/components/page-frame';
 import { SubscriberList } from '@/components/subscribers/subscriber-list';
 import { SyncStatus } from '@/components/sync-status';
+import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
 import { NewSubscriberPage } from '@/pages/new-subscriber-page';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 import { cn } from '@/lib/utils';
@@ -143,6 +144,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/subscribers" element={<SubscribersPage />} />
           <Route path="/subscribers/new" element={<NewSubscriberPage />} />
+          <Route path="/subscribers/:id/edit" element={<EditSubscriberPage />} />
           <Route path="/vencidos" element={<VencidosPage />} />
           <Route path="/por-vencer" element={<PorVencerPage />} />
           <Route path="/settings" element={<SettingsPage />} />

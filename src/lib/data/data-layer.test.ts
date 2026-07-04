@@ -430,6 +430,20 @@ describe('RxDB data layer', () => {
     ).resolves.toMatchObject({ phone_number: '+52 55 7207 0000' });
   });
 
+  it('clears the stored phone number when an edit omits it', async () => {
+    const context = await createTestContext('organization-1');
+
+    await saveSubscriber(context, {
+      id: 'subscriber-1',
+      name: 'Ana Torres',
+      phone_number: '+52 55 0000 0001',
+    });
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    const [subscriber] = await listSubscribers(context);
+    expect(subscriber?.phone_number).toBeNull();
+  });
+
   it('rejects empty subscriber names', async () => {
     const context = await createTestContext('organization-1');
 

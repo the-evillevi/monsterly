@@ -1,4 +1,7 @@
+import { Link } from 'react-router-dom';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
@@ -33,6 +36,14 @@ export function SubscriberList({ filterStatus }: SubscriberListProps) {
                   {subscriber.phoneNumber}
                 </a>
               ) : null}
+              <Button asChild size="sm" variant="ghost">
+                <Link
+                  aria-label={`Editar ${subscriber.name}`}
+                  to={`/subscribers/${subscriber.id}/edit`}
+                >
+                  Editar
+                </Link>
+              </Button>
             </div>
             <div className="grid gap-2 sm:justify-items-end">
               <Badge variant="outline">{subscriber.status}</Badge>
