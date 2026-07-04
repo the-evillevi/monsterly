@@ -17,6 +17,10 @@ const optionalTimestampSchema = {
   anyOf: [timestampSchema, { type: 'null' }],
 } as const;
 
+export const subscriberGenders = ['female', 'male', 'non_binary', 'unspecified'] as const;
+
+export type SubscriberGender = (typeof subscriberGenders)[number];
+
 export const subscriberSchemaLiteral = {
   title: 'subscriber schema',
   version: 0,
@@ -27,7 +31,7 @@ export const subscriberSchemaLiteral = {
     id: { type: 'string', maxLength: 100 },
     organization_id: { type: 'string', maxLength: 100 },
     name: { type: 'string', maxLength: 200 },
-    gender: { type: 'string', enum: ['female', 'male', 'non_binary', 'unspecified'] },
+    gender: { type: 'string', enum: subscriberGenders },
     phone_number: { type: ['string', 'null'], maxLength: 40 },
     created_at: timestampSchema,
     updated_at: timestampSchema,
@@ -136,7 +140,7 @@ export type SubscriberDocument = {
   _modified: string;
   created_at: string;
   deleted_at?: string | null;
-  gender: 'female' | 'male' | 'non_binary' | 'unspecified';
+  gender: SubscriberGender;
   id: string;
   name: string;
   organization_id: string;

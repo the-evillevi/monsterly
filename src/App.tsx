@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react';
-import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageFrame } from '@/components/page-frame';
 import { SyncStatus } from '@/components/sync-status';
+import { NewSubscriberPage } from '@/pages/new-subscriber-page';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
 import { cn } from '@/lib/utils';
@@ -57,6 +59,11 @@ function DashboardPage() {
 function SubscribersPage() {
   return (
     <PageFrame title="Subscribers" subtitle="Manage active gym and CrossFit members.">
+      <div>
+        <Button asChild>
+          <Link to="/subscribers/new">Agregar suscriptor</Link>
+        </Button>
+      </div>
       <SubscriberList />
     </PageFrame>
   );
@@ -96,32 +103,6 @@ function SettingsPage() {
         ))}
       </div>
     </PageFrame>
-  );
-}
-
-type PageFrameProps = {
-  children: ReactNode;
-  subtitle: string;
-  title: string;
-};
-
-function PageFrame({ children, subtitle, title }: PageFrameProps) {
-  return (
-    <section className="grid gap-7" aria-labelledby="page-title">
-      <div className="grid max-w-3xl gap-3">
-        <Badge className="w-fit" variant="secondary">
-          Monsterly
-        </Badge>
-        <h1
-          id="page-title"
-          className="text-4xl font-black leading-none text-foreground sm:text-6xl"
-        >
-          {title}
-        </h1>
-        <p className="text-lg leading-8 text-muted-foreground">{subtitle}</p>
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -197,6 +178,7 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/subscribers" element={<SubscribersPage />} />
+          <Route path="/subscribers/new" element={<NewSubscriberPage />} />
           <Route path="/vencidos" element={<VencidosPage />} />
           <Route path="/por-vencer" element={<PorVencerPage />} />
           <Route path="/settings" element={<SettingsPage />} />

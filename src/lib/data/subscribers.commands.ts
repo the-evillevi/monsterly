@@ -1,10 +1,11 @@
+import { isValidPhoneNumber } from '@/lib/domain/phone-number';
 import type { SubscriberDocument } from '@/lib/local-db/monsterly-db';
 
 import type { DataModuleContext } from './data-layer-context';
 
 export type SaveSubscriberInput = {
   gender?: SubscriberDocument['gender'];
-  id: string;
+  id?: string;
   name: string;
   phone_number?: string;
 };
@@ -13,21 +14,34 @@ export async function saveSubscriber(
   { activeOrganizationId, db }: DataModuleContext,
   input: SaveSubscriberInput,
 ) {
+  const name = input.name.trim();
+
+  if (!name) {
+    throw new Error('Subscriber name is required.');
+  }
+
+  if (input.phone_number && !isValidPhoneNumber(input.phone_number)) {
+    throw new Error('Subscriber phone number must have 10 to 15 digits.');
+  }
+
+  const id = input.id ?? crypto.randomUUID();
   const now = new Date().toISOString();
-  const existing = await db.subscribers
-    .findOne({
-      selector: {
-        id: input.id,
-        organization_id: activeOrganizationId,
-      },
-    })
-    .exec();
+  const existing = input.id
+    ? await db.subscribers
+        .findOne({
+          selector: {
+            id,
+            organization_id: activeOrganizationId,
+          },
+        })
+        .exec()
+    : null;
   const subscriber = {
     _deleted: false,
     _modified: now,
     gender: input.gender ?? 'unspecified',
-    id: input.id,
-    name: input.name,
+    id,
+    name,
     organization_id: activeOrganizationId,
     phone_number: input.phone_number,
     updated_at: now,
