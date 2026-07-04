@@ -7,6 +7,10 @@ type SubscriberListProps = {
   filterStatus?: SubscriptionStatus;
 };
 
+function telHref(phoneNumber: string) {
+  return `tel:${phoneNumber.replace(/[^+\d]/g, '')}`;
+}
+
 export function SubscriberList({ filterStatus }: SubscriberListProps) {
   const { isLoading, summaries } = useSubscriberSummaries(filterStatus);
 
@@ -24,7 +28,7 @@ export function SubscriberList({ filterStatus }: SubscriberListProps) {
               {subscriber.phoneNumber ? (
                 <a
                   className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-                  href={`tel:${subscriber.phoneNumber}`}
+                  href={telHref(subscriber.phoneNumber)}
                 >
                   {subscriber.phoneNumber}
                 </a>

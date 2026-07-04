@@ -60,7 +60,7 @@ describe('SubscriberList', () => {
     expect(screen.getByText('Al corriente')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '+52 55 1111 0001' })).toHaveAttribute(
       'href',
-      'tel:+52 55 1111 0001',
+      'tel:+525511110001',
     );
     expect(screen.getByText('Gym')).toBeInTheDocument();
     expect(screen.getByText('CrossFit')).toBeInTheDocument();
