@@ -1,22 +1,29 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { PageFrame } from '@/components/page-frame';
+import { ArchiveSubscriberButton } from '@/components/subscribers/archive-subscriber-button';
 import {
   SubscriberForm,
   type SubscriberFormValues,
 } from '@/components/subscribers/subscriber-form';
 import { Button } from '@/components/ui/button';
 import { useSubscriber } from '@/lib/data/use-subscriber-summaries';
-import { useSaveSubscriber } from '@/lib/data/use-subscriber-commands';
+import { useArchiveSubscriber, useSaveSubscriber } from '@/lib/data/use-subscriber-commands';
 
 export function EditSubscriberPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const save = useSaveSubscriber();
+  const archive = useArchiveSubscriber();
   const { isLoading, subscriber } = useSubscriber(id);
 
   async function handleSubmit(values: SubscriberFormValues) {
     await save({ id, ...values });
+    navigate('/subscribers');
+  }
+
+  async function handleArchive() {
+    await archive(id);
     navigate('/subscribers');
   }
 
@@ -38,6 +45,7 @@ export function EditSubscriberPage() {
             name: subscriber.name,
             phone_number: subscriber.phone_number ?? undefined,
           }}
+          footer={<ArchiveSubscriberButton onArchive={handleArchive} />}
           onSubmit={handleSubmit}
           submitLabel="Guardar"
         />

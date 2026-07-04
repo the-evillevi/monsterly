@@ -69,6 +69,34 @@ describe('EditSubscriberPage', () => {
     expect(subscriber?.phone_number).toBeNull();
   });
 
+  it('archives the subscriber after an explicit confirmation', async () => {
+    const context = await createTestDataContext();
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    await renderEditPage('subscriber-1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archivar suscriptor' }));
+    expect(screen.getByText('¿Archivar este suscriptor?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(await screen.findByText('subscribers-list')).toBeInTheDocument();
+    await expect(listSubscribers(context)).resolves.toEqual([]);
+  });
+
+  it('keeps the subscriber when the archive confirmation is cancelled', async () => {
+    const context = await createTestDataContext();
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    await renderEditPage('subscriber-1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archivar suscriptor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.getByRole('button', { name: 'Archivar suscriptor' })).toBeInTheDocument();
+    await expect(listSubscribers(context)).resolves.toMatchObject([{ id: 'subscriber-1' }]);
+  });
+
   it('shows a not-found message for unknown subscribers', async () => {
     await renderEditPage('missing-subscriber');
 
