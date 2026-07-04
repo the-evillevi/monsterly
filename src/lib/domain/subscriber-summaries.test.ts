@@ -15,7 +15,7 @@ describe('buildSubscriberSummaries', () => {
     expect(summary).toMatchObject({
       paidUntilDate: undefined,
       paidUntilLabel: 'Sin suscripción',
-      plan: 'Sin suscripción',
+      plans: [],
       status: 'Sin suscripción',
     });
   });
@@ -40,5 +40,32 @@ describe('buildSubscriberSummaries', () => {
       'Por vencer',
       'Vencido',
     ]);
+  });
+
+  it('passes the phone number through and lists one plan per subscription kind', () => {
+    const [summary] = buildSubscriberSummaries({
+      subscribers: [{ id: 'subscriber-1', name: 'Mariana Soto', phone_number: '+52 55 1111 0001' }],
+      subscriptions: [
+        { kind: 'gym', paid_until_date: '2026-08-01', subscriber_id: 'subscriber-1' },
+        { kind: 'crossfit', paid_until_date: '2026-08-15', subscriber_id: 'subscriber-1' },
+        { kind: 'gym', paid_until_date: '2026-09-01', subscriber_id: 'subscriber-1' },
+      ],
+      today,
+    });
+
+    expect(summary).toMatchObject({
+      phoneNumber: '+52 55 1111 0001',
+      plans: ['Gym', 'CrossFit'],
+    });
+  });
+
+  it('leaves the phone number undefined when the subscriber has none', () => {
+    const [summary] = buildSubscriberSummaries({
+      subscribers: [{ id: 'subscriber-1', name: 'Mariana Soto', phone_number: null }],
+      subscriptions: [],
+      today,
+    });
+
+    expect(summary?.phoneNumber).toBeUndefined();
   });
 });

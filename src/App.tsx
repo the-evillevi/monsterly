@@ -1,13 +1,12 @@
 import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageFrame } from '@/components/page-frame';
+import { SubscriberList } from '@/components/subscribers/subscriber-list';
 import { SyncStatus } from '@/components/sync-status';
 import { NewSubscriberPage } from '@/pages/new-subscriber-page';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
-import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -103,41 +102,6 @@ function SettingsPage() {
         ))}
       </div>
     </PageFrame>
-  );
-}
-
-type SubscriberListProps = {
-  filterStatus?: SubscriptionStatus;
-};
-
-function SubscriberList({ filterStatus }: SubscriberListProps) {
-  const { isLoading, summaries } = useSubscriberSummaries(filterStatus);
-
-  if (isLoading) {
-    return <p className="text-muted-foreground">Loading subscribers...</p>;
-  }
-
-  return (
-    <div className="grid max-w-3xl gap-3">
-      {summaries.map((subscriber) => (
-        <Card className="p-4" key={subscriber.id}>
-          <article className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-            <div className="grid gap-1">
-              <strong className="text-foreground">{subscriber.name}</strong>
-              <span className="text-muted-foreground">{subscriber.plan}</span>
-            </div>
-            <div className="grid gap-2 sm:justify-items-end">
-              <Badge variant="outline">{subscriber.status}</Badge>
-              {subscriber.paidUntilDate ? (
-                <time className="text-sm text-muted-foreground" dateTime={subscriber.paidUntilDate}>
-                  Paid until {subscriber.paidUntilLabel}
-                </time>
-              ) : null}
-            </div>
-          </article>
-        </Card>
-      ))}
-    </div>
   );
 }
 
