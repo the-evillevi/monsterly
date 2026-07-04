@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { isValidPhoneNumber } from '@/lib/domain/phone-number';
 import { type SubscriberGender, subscriberGenders } from '@/lib/local-db/monsterly-db';
 
 export type SubscriberFormValues = {
@@ -38,6 +39,7 @@ export function SubscriberForm({
   submitLabel,
 }: SubscriberFormProps) {
   const [nameError, setNameError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -45,6 +47,7 @@ export function SubscriberForm({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get('name') ?? '').trim();
+    const phoneNumber = String(formData.get('phone_number') ?? '').trim();
 
     if (!name) {
       setNameError('El nombre es obligatorio.');
@@ -52,6 +55,13 @@ export function SubscriberForm({
     }
 
     setNameError(null);
+
+    if (phoneNumber && !isValidPhoneNumber(phoneNumber)) {
+      setPhoneError('Ingresa un teléfono válido de al menos 10 dígitos.');
+      return;
+    }
+
+    setPhoneError(null);
     setSubmitError(null);
     setIsSaving(true);
 
@@ -59,7 +69,7 @@ export function SubscriberForm({
       await onSubmit({
         gender: toGender(formData.get('gender')),
         name,
-        phone_number: String(formData.get('phone_number') ?? '').trim() || undefined,
+        phone_number: phoneNumber || undefined,
       });
     } catch (error) {
       console.error('Failed to save the subscriber.', error);
@@ -103,6 +113,8 @@ export function SubscriberForm({
       <div className="grid gap-2">
         <Label htmlFor="subscriber-phone">Teléfono (opcional)</Label>
         <Input
+          aria-describedby={phoneError ? 'subscriber-phone-error' : undefined}
+          aria-invalid={phoneError ? true : undefined}
           autoComplete="tel"
           defaultValue={defaultValues?.phone_number}
           id="subscriber-phone"
@@ -110,6 +122,11 @@ export function SubscriberForm({
           name="phone_number"
           type="tel"
         />
+        {phoneError ? (
+          <p className="text-sm text-destructive" id="subscriber-phone-error">
+            {phoneError}
+          </p>
+        ) : null}
       </div>
       {submitError ? (
         <p className="text-sm text-destructive" role="alert">

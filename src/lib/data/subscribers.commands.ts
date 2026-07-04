@@ -1,3 +1,4 @@
+import { isValidPhoneNumber } from '@/lib/domain/phone-number';
 import type { SubscriberDocument } from '@/lib/local-db/monsterly-db';
 
 import type { DataModuleContext } from './data-layer-context';
@@ -17,6 +18,10 @@ export async function saveSubscriber(
 
   if (!name) {
     throw new Error('Subscriber name is required.');
+  }
+
+  if (input.phone_number && !isValidPhoneNumber(input.phone_number)) {
+    throw new Error('Subscriber phone number must have 10 to 15 digits.');
   }
 
   const id = input.id ?? crypto.randomUUID();
