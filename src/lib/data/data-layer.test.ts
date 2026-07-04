@@ -18,7 +18,7 @@ import {
   getLocalDatabaseName,
 } from './data-layer-context';
 import { seedDemoSubscribers } from './seed-demo-subscribers';
-import { saveSubscriber } from './subscribers.commands';
+import { archiveSubscriber, saveSubscriber } from './subscribers.commands';
 import { listSubscribers, watchSubscriber, watchSubscribers } from './subscribers.queries';
 import { recordRenewal, saveSubscription } from './subscriptions.commands';
 import {
@@ -442,6 +442,61 @@ describe('RxDB data layer', () => {
 
     const [subscriber] = await listSubscribers(context);
     expect(subscriber?.phone_number).toBeNull();
+  });
+
+  it('archives with a soft delete that keeps the row replicable', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    await archiveSubscriber(context, 'subscriber-1');
+
+    await expect(listSubscribers(context)).resolves.toEqual([]);
+
+    const rawDocument = await context.db.subscribers
+      .findOne({ selector: { id: 'subscriber-1' } })
+      .exec();
+    expect(rawDocument).not.toBeNull();
+    expect(rawDocument?.deleted).toBe(false);
+    expect(rawDocument?.toJSON().deleted_at).toBeTruthy();
+  });
+
+  it('drops archived subscribers from reactive queries', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    await waitForEmission(watchSubscribers(context), (subscribers) => subscribers.length === 1);
+    await archiveSubscriber(context, 'subscriber-1');
+
+    await expect(
+      waitForEmission(watchSubscribers(context), (subscribers) => subscribers.length === 0),
+    ).resolves.toEqual([]);
+  });
+
+  it('keeps subscriptions untouched when the subscriber is archived', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-08-01',
+      start_date: '2026-07-01',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await archiveSubscriber(context, 'subscriber-1');
+
+    await expect(listSubscriptions(context)).resolves.toMatchObject([{ id: 'subscription-1' }]);
+  });
+
+  it('rejects archiving subscribers outside the active organization', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const organizationTwo = await createTestContext('organization-2');
+    await saveSubscriber(organizationOne, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    await expect(archiveSubscriber(organizationTwo, 'subscriber-1')).rejects.toThrow(
+      'Subscriber must belong to the active organization.',
+    );
   });
 
   it('rejects empty subscriber names', async () => {
