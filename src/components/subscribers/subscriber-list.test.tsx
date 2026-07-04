@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { DataLayerContext } from '@/lib/data/data-layer-context';
@@ -14,7 +15,9 @@ async function renderList(filterStatus?: SubscriptionStatus) {
 
   render(
     <DataLayerContext.Provider value={context}>
-      <SubscriberList filterStatus={filterStatus} />
+      <MemoryRouter>
+        <SubscriberList filterStatus={filterStatus} />
+      </MemoryRouter>
     </DataLayerContext.Provider>,
   );
 
@@ -52,7 +55,9 @@ describe('SubscriberList', () => {
 
     render(
       <DataLayerContext.Provider value={context}>
-        <SubscriberList />
+        <MemoryRouter>
+          <SubscriberList />
+        </MemoryRouter>
       </DataLayerContext.Provider>,
     );
 
@@ -64,6 +69,10 @@ describe('SubscriberList', () => {
     );
     expect(screen.getByText('Gym')).toBeInTheDocument();
     expect(screen.getByText('CrossFit')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Editar Mariana Soto' })).toHaveAttribute(
+      'href',
+      '/subscribers/subscriber-1/edit',
+    );
   });
 
   it('shows a single Sin suscripción badge and no plan badges without subscriptions', async () => {
@@ -72,14 +81,16 @@ describe('SubscriberList', () => {
 
     render(
       <DataLayerContext.Provider value={context}>
-        <SubscriberList />
+        <MemoryRouter>
+          <SubscriberList />
+        </MemoryRouter>
       </DataLayerContext.Provider>,
     );
 
     expect(await screen.findByText('Carlos Perez')).toBeInTheDocument();
     expect(screen.getAllByText('Sin suscripción')).toHaveLength(1);
     expect(screen.queryByText('Gym')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /\+52/ })).not.toBeInTheDocument();
   });
 
   it('filters by status', async () => {
