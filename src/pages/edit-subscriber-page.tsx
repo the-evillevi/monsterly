@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { PageFrame } from '@/components/page-frame';
+import { ArchiveConfirmButton } from '@/components/archive-confirm-button';
 import { ResourceNotFound } from '@/components/resource-not-found';
-import { ArchiveSubscriberButton } from '@/components/subscribers/archive-subscriber-button';
 import { SubscriptionListSection } from '@/components/subscriptions/subscription-list-section';
 import {
   SubscriberForm,
@@ -46,7 +46,13 @@ export function EditSubscriberPage() {
               name: subscriber.name,
               phone_number: subscriber.phone_number ?? undefined,
             }}
-            footer={<ArchiveSubscriberButton onArchive={handleArchive} />}
+            footer={
+              <ArchiveConfirmButton
+                confirmPrompt="¿Archivar este suscriptor?"
+                label="Archivar suscriptor"
+                onArchive={handleArchive}
+              />
+            }
             onSubmit={handleSubmit}
             submitLabel="Guardar"
           />

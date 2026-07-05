@@ -2,11 +2,17 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 
-type ArchiveSubscriberButtonProps = {
+type ArchiveConfirmButtonProps = {
+  confirmPrompt: string;
+  label: string;
   onArchive: () => Promise<void>;
 };
 
-export function ArchiveSubscriberButton({ onArchive }: ArchiveSubscriberButtonProps) {
+export function ArchiveConfirmButton({
+  confirmPrompt,
+  label,
+  onArchive,
+}: ArchiveConfirmButtonProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +24,7 @@ export function ArchiveSubscriberButton({ onArchive }: ArchiveSubscriberButtonPr
     try {
       await onArchive();
     } catch (archiveError) {
-      console.error('Failed to archive the subscriber.', archiveError);
+      console.error('Failed to archive.', archiveError);
       setError('No se pudo archivar. Intenta de nuevo.');
       setIsArchiving(false);
     }
@@ -28,7 +34,7 @@ export function ArchiveSubscriberButton({ onArchive }: ArchiveSubscriberButtonPr
     return (
       <div className="border-t pt-4">
         <Button onClick={() => setIsConfirming(true)} type="button" variant="outline">
-          Archivar suscriptor
+          {label}
         </Button>
       </div>
     );
@@ -36,7 +42,7 @@ export function ArchiveSubscriberButton({ onArchive }: ArchiveSubscriberButtonPr
 
   return (
     <div className="grid gap-3 border-t pt-4 justify-items-start">
-      <p className="text-sm font-medium text-foreground">¿Archivar este suscriptor?</p>
+      <p className="text-sm font-medium text-foreground">{confirmPrompt}</p>
       {error ? (
         <p className="text-sm text-destructive" role="alert">
           {error}
