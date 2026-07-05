@@ -1,6 +1,6 @@
 import type { BillingPeriod } from '@/lib/local-db/monsterly-db';
 
-import { formatDateOnly, parseDateOnly } from './date-only';
+import { formatDateOnly, parseDateOnly, todayDateOnly } from './date-only';
 
 export const billingPeriodLabels: Record<BillingPeriod, string> = {
   bimonthly: 'Bimestral',
@@ -40,6 +40,20 @@ export function addBillingPeriod(
   }
 
   return addMonthsClamped(date, monthsPerPeriod[billingPeriod] ?? 0);
+}
+
+export function nextPaidUntilDate(
+  paidUntilDate: string,
+  billingPeriod: BillingPeriod,
+  customDays?: number | null,
+  today = new Date(),
+): string {
+  // Renew from whichever is later so expired members start counting from today
+  // while active members keep the days they already paid for.
+  const todayValue = todayDateOnly(today);
+  const base = paidUntilDate > todayValue ? paidUntilDate : todayValue;
+
+  return addBillingPeriod(base, billingPeriod, customDays);
 }
 
 function addDays(date: string, days: number): string {
