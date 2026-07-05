@@ -48,7 +48,7 @@ export function SubscriptionListSection({
                   </span>
                   <Button asChild className="ml-auto" size="sm" variant="ghost">
                     <Link
-                      aria-label={`Editar suscripción ${subscriptionKindLabels[subscription.kind]}`}
+                      aria-label={`Editar suscripción ${subscriptionKindLabels[subscription.kind]} pagada hasta ${formatDateOnlyLabel(subscription.paid_until_date)}`}
                       to={`/subscribers/${subscriberId}/subscriptions/${subscription.id}/edit`}
                     >
                       Editar
