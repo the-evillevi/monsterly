@@ -4,16 +4,13 @@ import { Controller, useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
 
+import { BillingPeriodSelect } from '@/components/subscriptions/billing-period-select';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import {
-  addBillingPeriod,
-  billingPeriodLabels,
-  isValidCustomDays,
-} from '@/lib/domain/billing-period';
+import { addBillingPeriod, isValidCustomDays } from '@/lib/domain/billing-period';
 import { todayDateOnly } from '@/lib/domain/date-only';
 import { subscriptionKindLabels } from '@/lib/domain/subscription-kind';
 import {
@@ -136,13 +133,10 @@ export function SubscriptionForm({
         </Field>
         <Field data-invalid={errors.billing_period ? true : undefined}>
           <FieldLabel htmlFor="subscription-billing-period">Periodo</FieldLabel>
-          <Select id="subscription-billing-period" {...form.register('billing_period')}>
-            {billingPeriods.map((period) => (
-              <option key={period} value={period}>
-                {billingPeriodLabels[period]}
-              </option>
-            ))}
-          </Select>
+          <BillingPeriodSelect
+            id="subscription-billing-period"
+            {...form.register('billing_period')}
+          />
           <FieldError>{errors.billing_period?.message}</FieldError>
         </Field>
         {billingPeriod === 'custom' ? (

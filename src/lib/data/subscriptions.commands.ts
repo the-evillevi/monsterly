@@ -120,12 +120,18 @@ export async function renewSubscription(context: DataModuleContext, input: Renew
     subscriber_id: subscription.subscriber_id,
   });
 
-  await recordRenewal(context, {
-    id: crypto.randomUUID(),
-    new_paid_until_date: newPaidUntilDate,
-    previous_paid_until_date: subscription.paid_until_date,
-    subscription_id: subscription.id,
-  });
+  try {
+    await recordRenewal(context, {
+      id: crypto.randomUUID(),
+      new_paid_until_date: newPaidUntilDate,
+      previous_paid_until_date: subscription.paid_until_date,
+      subscription_id: subscription.id,
+    });
+  } catch (renewalError) {
+    // The subscription is already renewed; failing here would make the UI
+    // report an error and invite a retry that extends the period twice.
+    console.error('Failed to record the renewal history entry.', renewalError);
+  }
 
   return updated;
 }
