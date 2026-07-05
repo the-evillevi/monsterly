@@ -1,11 +1,11 @@
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { PageFrame } from '@/components/page-frame';
+import { ResourceNotFound } from '@/components/resource-not-found';
 import {
   SubscriptionForm,
   type SubscriptionFormValues,
 } from '@/components/subscriptions/subscription-form';
-import { Button } from '@/components/ui/button';
 import { useSaveSubscription } from '@/lib/data/use-subscription-commands';
 import { useSubscriber } from '@/lib/data/use-subscriber-summaries';
 
@@ -26,12 +26,11 @@ export function EditSubscriptionPage() {
     <PageFrame title="Editar suscripción" subtitle="Actualiza el plan y las fechas de pago.">
       {isLoading ? <p className="text-muted-foreground">Cargando suscripción...</p> : null}
       {!isLoading && !subscription ? (
-        <div className="grid max-w-md gap-4 justify-items-start">
-          <p className="text-muted-foreground">Suscripción no encontrada.</p>
-          <Button asChild variant="outline">
-            <Link to={`/subscribers/${id}/edit`}>Volver al suscriptor</Link>
-          </Button>
-        </div>
+        <ResourceNotFound
+          backLabel="Volver al suscriptor"
+          backTo={`/subscribers/${id}/edit`}
+          message="Suscripción no encontrada."
+        />
       ) : null}
       {!isLoading && subscriber && subscription ? (
         <div className="grid gap-4">
