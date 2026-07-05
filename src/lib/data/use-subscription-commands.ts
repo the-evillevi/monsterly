@@ -1,7 +1,12 @@
 import { useCallback, useContext } from 'react';
 
 import { DataLayerContext } from './data-layer-context';
-import { saveSubscription, type SaveSubscriptionInput } from './subscriptions.commands';
+import {
+  renewSubscription,
+  type RenewSubscriptionInput,
+  saveSubscription,
+  type SaveSubscriptionInput,
+} from './subscriptions.commands';
 
 export function useSaveSubscription() {
   const { activeOrganizationId, db } = useContext(DataLayerContext);
@@ -13,6 +18,21 @@ export function useSaveSubscription() {
       }
 
       return saveSubscription({ activeOrganizationId, db }, input);
+    },
+    [activeOrganizationId, db],
+  );
+}
+
+export function useRenewSubscription() {
+  const { activeOrganizationId, db } = useContext(DataLayerContext);
+
+  return useCallback(
+    async (input: RenewSubscriptionInput) => {
+      if (!db) {
+        throw new Error('Local database is not ready yet.');
+      }
+
+      return renewSubscription({ activeOrganizationId, db }, input);
     },
     [activeOrganizationId, db],
   );

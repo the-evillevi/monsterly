@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { addBillingPeriod } from './billing-period';
+import { addBillingPeriod, nextPaidUntilDate } from './billing-period';
 
 describe('addBillingPeriod', () => {
   it('adds seven days for weekly periods', () => {
@@ -53,5 +53,25 @@ describe('addBillingPeriod', () => {
 
   it('rejects custom periods with fractional days', () => {
     expect(() => addBillingPeriod('2026-07-04', 'custom', 7.5)).toThrow();
+  });
+});
+
+describe('nextPaidUntilDate', () => {
+  const today = new Date(2026, 6, 4);
+
+  it('extends an active subscription from its paid-until date', () => {
+    expect(nextPaidUntilDate('2026-07-20', 'monthly', undefined, today)).toBe('2026-08-20');
+  });
+
+  it('renews an expired subscription from today', () => {
+    expect(nextPaidUntilDate('2026-06-20', 'monthly', undefined, today)).toBe('2026-08-04');
+  });
+
+  it('renews a subscription expiring today from today', () => {
+    expect(nextPaidUntilDate('2026-07-04', 'weekly', undefined, today)).toBe('2026-07-11');
+  });
+
+  it('renews custom periods with the given days', () => {
+    expect(nextPaidUntilDate('2026-06-01', 'custom', 15, today)).toBe('2026-07-19');
   });
 });

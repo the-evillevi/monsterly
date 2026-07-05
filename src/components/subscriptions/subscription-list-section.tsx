@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+import { RenewSubscriptionControl } from '@/components/subscriptions/renew-subscription-control';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -74,6 +75,7 @@ export function SubscriptionListSection({
                     </dd>
                   </div>
                 </dl>
+                <RenewSubscriptionControl subscription={subscription} />
               </Card>
             </li>
           ))}
