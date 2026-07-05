@@ -18,6 +18,10 @@ const monthsPerPeriod: Partial<Record<BillingPeriod, number>> = {
   yearly: 12,
 };
 
+export function isValidCustomDays(days: number | null | undefined): days is number {
+  return days != null && Number.isInteger(days) && days >= 1;
+}
+
 export function addBillingPeriod(
   date: string,
   billingPeriod: BillingPeriod,
@@ -28,7 +32,7 @@ export function addBillingPeriod(
   }
 
   if (billingPeriod === 'custom') {
-    if (customDays == null || !Number.isInteger(customDays) || customDays < 1) {
+    if (!isValidCustomDays(customDays)) {
       throw new Error('Custom billing periods need a whole number of days of at least 1.');
     }
 

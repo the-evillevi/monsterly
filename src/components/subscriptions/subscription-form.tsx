@@ -9,7 +9,11 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { addBillingPeriod, billingPeriodLabels } from '@/lib/domain/billing-period';
+import {
+  addBillingPeriod,
+  billingPeriodLabels,
+  isValidCustomDays,
+} from '@/lib/domain/billing-period';
 import { todayDateOnly } from '@/lib/domain/date-only';
 import { subscriptionKindLabels } from '@/lib/domain/subscription-kind';
 import {
@@ -28,7 +32,7 @@ const subscriptionFormSchema = z
     start_date: z.string().min(1, 'Selecciona la fecha de inicio.'),
   })
   .superRefine((values, context) => {
-    if (values.billing_period === 'custom' && !isValidCustomDays(values.custom_days)) {
+    if (values.billing_period === 'custom' && !isValidCustomDays(Number(values.custom_days))) {
       context.addIssue({
         code: 'custom',
         message: 'Ingresa un número de días de al menos 1.',
@@ -63,12 +67,6 @@ type SubscriptionFormProps = {
   submitLabel: string;
 };
 
-function isValidCustomDays(value: string) {
-  const days = Number(value);
-
-  return Number.isInteger(days) && days >= 1;
-}
-
 export function SubscriptionForm({
   cancelTo,
   defaultValues,
@@ -100,7 +98,8 @@ export function SubscriptionForm({
       );
       form.setValue('paid_until_date', suggested);
     } catch {
-      // Wait until the custom days are valid before suggesting a date.
+      // Clear the stale suggestion until the custom days are valid.
+      form.setValue('paid_until_date', '');
     }
   }, [billingPeriod, customDays, form, startDate, suggestPaidUntil]);
 
