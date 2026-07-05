@@ -1,31 +1,17 @@
 import { useState } from 'react';
 
+import { BillingPeriodSelect } from '@/components/subscriptions/billing-period-select';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import {
-  billingPeriodLabels,
-  isValidCustomDays,
-  nextPaidUntilDate,
-} from '@/lib/domain/billing-period';
-import { parseDateOnly } from '@/lib/domain/date-only';
+import { isValidCustomDays, nextPaidUntilDate } from '@/lib/domain/billing-period';
+import { formatDateOnlyLabel } from '@/lib/domain/date-only';
 import { useRenewSubscription } from '@/lib/data/use-subscription-commands';
-import {
-  type BillingPeriod,
-  billingPeriods,
-  type SubscriptionDocument,
-} from '@/lib/local-db/monsterly-db';
+import type { BillingPeriod, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
 type RenewSubscriptionControlProps = {
   subscription: SubscriptionDocument;
 };
-
-const previewFormatter = new Intl.DateTimeFormat('es', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-});
 
 export function RenewSubscriptionControl({ subscription }: RenewSubscriptionControlProps) {
   const renew = useRenewSubscription();
@@ -82,17 +68,11 @@ export function RenewSubscriptionControl({ subscription }: RenewSubscriptionCont
     <div className="grid gap-3 border-t pt-3">
       <Field>
         <FieldLabel htmlFor={`renew-period-${subscription.id}`}>Renovar por</FieldLabel>
-        <Select
+        <BillingPeriodSelect
           id={`renew-period-${subscription.id}`}
           onChange={(event) => setBillingPeriod(event.target.value as BillingPeriod)}
           value={billingPeriod}
-        >
-          {billingPeriods.map((period) => (
-            <option key={period} value={period}>
-              {billingPeriodLabels[period]}
-            </option>
-          ))}
-        </Select>
+        />
       </Field>
       {billingPeriod === 'custom' ? (
         <Field>
@@ -112,7 +92,7 @@ export function RenewSubscriptionControl({ subscription }: RenewSubscriptionCont
           <>
             Nuevo pagado hasta:{' '}
             <time className="font-medium text-foreground" dateTime={newPaidUntilDate}>
-              {previewFormatter.format(parseDateOnly(newPaidUntilDate))}
+              {formatDateOnlyLabel(newPaidUntilDate)}
             </time>
           </>
         ) : (
