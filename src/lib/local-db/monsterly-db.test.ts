@@ -74,4 +74,44 @@ describe('Monsterly local RxDB database', () => {
 
     expect(updatedSubscriber?.name).toBe('Mariana Soto Garcia');
   });
+
+  it('stores optional plan_name and price on subscriptions', async () => {
+    const db = await getMonsterlyDatabase({ name: 'monsterly-test' });
+
+    await db.subscribers.insert({
+      _deleted: false,
+      _modified: '2026-07-01T00:00:00.000Z',
+      id: 'subscriber-2',
+      organization_id: 'organization-1',
+      name: 'Carlos Perez',
+      gender: 'unspecified',
+      phone_number: undefined,
+      created_at: '2026-07-01T00:00:00.000Z',
+      updated_at: '2026-07-01T00:00:00.000Z',
+      deleted_at: undefined,
+    });
+
+    await db.subscriptions.insert({
+      _deleted: false,
+      _modified: '2026-07-01T00:00:00.000Z',
+      id: 'subscription-2',
+      organization_id: 'organization-1',
+      subscriber_id: 'subscriber-2',
+      kind: 'gym',
+      billing_period: 'monthly',
+      custom_days: undefined,
+      plan_name: 'Regular',
+      price: 450,
+      start_date: '2026-07-01',
+      paid_until_date: '2026-07-31',
+      created_at: '2026-07-01T00:00:00.000Z',
+      updated_at: '2026-07-01T00:00:00.000Z',
+      deleted_at: undefined,
+    });
+
+    const subscription = await db.subscriptions.findOne('subscription-2').exec();
+
+    expect(subscription?.plan_name).toBe('Regular');
+    expect(subscription?.price).toBe(450);
+  });
 });

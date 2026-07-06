@@ -51,6 +51,16 @@ describe('Supabase replication migrations', () => {
     );
   });
 
+  it('adds nullable plan_name and price columns to subscriptions', async () => {
+    const migration = await readMigrationContaining('add_subscription_plan_name_and_price');
+
+    expect(migration).toContain('add column if not exists plan_name text');
+    expect(migration).toContain('add column if not exists price numeric(10, 2)');
+    expect(migration).toContain(
+      'add constraint subscriptions_price_non_negative check (price is null or price >= 0)',
+    );
+  });
+
   it('keeps _deleted client-owned instead of deriving it from deleted_at', async () => {
     const migration = await readMigrationContaining('add_rxdb_sync_metadata');
 
