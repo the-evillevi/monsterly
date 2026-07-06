@@ -1,0 +1,18 @@
+[
+  {
+    "nombre": "Mariana Soto",
+    "telefono": "7770000001",
+    "membresia": "Regular",
+    "fecha_inicio": "2026-07-01",
+    "vencimiento": "2026-07-31",
+    "monto": 450
+  },
+  {
+    "nombre": "Carlos Perez",
+    "telefono": null,
+    "membresia": "3 días por semana",
+    "fecha_inicio": "2026-06-15",
+    "vencimiento": "2026-07-14",
+    "monto": 350
+  }
+]

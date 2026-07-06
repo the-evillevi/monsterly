@@ -6,3 +6,7 @@ dist/
 !.env.example
 .DS_Store
 .claude/
+
+# Real subscriber data (personal names/phones) stays out of git.
+scripts/data/*.json
+!scripts/data/*.example.json
