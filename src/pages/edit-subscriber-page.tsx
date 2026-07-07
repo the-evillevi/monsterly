@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { PageFrame } from '@/components/page-frame';
 import { ArchiveSubscriberButton } from '@/components/subscribers/archive-subscriber-button';
+import { SubscriptionListSection } from '@/components/subscriptions/subscription-list-section';
 import {
   SubscriberForm,
   type SubscriberFormValues,
@@ -39,16 +40,19 @@ export function EditSubscriberPage() {
         </div>
       ) : null}
       {!isLoading && subscriber ? (
-        <SubscriberForm
-          defaultValues={{
-            gender: subscriber.gender,
-            name: subscriber.name,
-            phone_number: subscriber.phone_number ?? undefined,
-          }}
-          footer={<ArchiveSubscriberButton onArchive={handleArchive} />}
-          onSubmit={handleSubmit}
-          submitLabel="Guardar"
-        />
+        <div className="grid gap-6">
+          <SubscriberForm
+            defaultValues={{
+              gender: subscriber.gender,
+              name: subscriber.name,
+              phone_number: subscriber.phone_number ?? undefined,
+            }}
+            footer={<ArchiveSubscriberButton onArchive={handleArchive} />}
+            onSubmit={handleSubmit}
+            submitLabel="Guardar"
+          />
+          <SubscriptionListSection subscriberId={id} subscriptions={subscriber.subscriptions} />
+        </div>
       ) : null}
     </PageFrame>
   );
