@@ -13,3 +13,13 @@ export function formatDateOnly(date: Date): string {
 export function todayDateOnly(today = new Date()): string {
   return formatDateOnly(today);
 }
+
+const dateOnlyLabelFormatter = new Intl.DateTimeFormat('es', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+});
+
+export function formatDateOnlyLabel(value: string): string {
+  return dateOnlyLabelFormatter.format(parseDateOnly(value));
+}

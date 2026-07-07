@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 
+import { RenewSubscriptionControl } from '@/components/subscriptions/renew-subscription-control';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { billingPeriodLabels } from '@/lib/domain/billing-period';
-import { parseDateOnly } from '@/lib/domain/date-only';
+import { formatDateOnlyLabel } from '@/lib/domain/date-only';
 import { subscriptionKindLabels } from '@/lib/domain/subscription-kind';
 import type { SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
@@ -12,16 +13,6 @@ type SubscriptionListSectionProps = {
   subscriberId: string;
   subscriptions: SubscriptionDocument[];
 };
-
-const dateFormatter = new Intl.DateTimeFormat('es', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-});
-
-function formatDateLabel(date: string) {
-  return dateFormatter.format(parseDateOnly(date));
-}
 
 function formatPeriodLabel(subscription: SubscriptionDocument) {
   if (subscription.billing_period === 'custom' && subscription.custom_days) {
@@ -61,7 +52,7 @@ export function SubscriptionListSection({
                     <dt className="text-muted-foreground">Inicio</dt>
                     <dd>
                       <time dateTime={subscription.start_date}>
-                        {formatDateLabel(subscription.start_date)}
+                        {formatDateOnlyLabel(subscription.start_date)}
                       </time>
                     </dd>
                   </div>
@@ -69,11 +60,12 @@ export function SubscriptionListSection({
                     <dt className="text-muted-foreground">Pagado hasta</dt>
                     <dd>
                       <time dateTime={subscription.paid_until_date}>
-                        {formatDateLabel(subscription.paid_until_date)}
+                        {formatDateOnlyLabel(subscription.paid_until_date)}
                       </time>
                     </dd>
                   </div>
                 </dl>
+                <RenewSubscriptionControl subscription={subscription} />
               </Card>
             </li>
           ))}
