@@ -43,6 +43,7 @@ export function DatePicker({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
         <Calendar
+          className="p-4 [--cell-size:2.75rem]"
           defaultMonth={date}
           locale={es}
           mode="single"
