@@ -400,6 +400,33 @@ describe('RxDB data layer', () => {
     await expect(listRenewals(organizationOne)).resolves.toEqual([]);
   });
 
+  it('clears the stored custom days when the billing period stops being custom', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'custom',
+      custom_days: 10,
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-07-14',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-08-04',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    const [subscription] = await listSubscriptions(context);
+    expect(subscription?.billing_period).toBe('monthly');
+    expect(subscription?.custom_days).toBeNull();
+  });
+
   it('renews an active subscription from its paid-until date and records the renewal', async () => {
     const context = await createTestContext('organization-1');
     await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });

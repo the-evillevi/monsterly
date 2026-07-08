@@ -6,7 +6,7 @@ import type { DataModuleContext } from './data-layer-context';
 
 export type SaveSubscriptionInput = {
   billing_period: SubscriptionDocument['billing_period'];
-  custom_days?: number;
+  custom_days?: number | null;
   id: string;
   kind: SubscriptionDocument['kind'];
   paid_until_date: string;
@@ -52,7 +52,9 @@ export async function saveSubscription(
     _deleted: false,
     _modified: now,
     billing_period: input.billing_period,
-    custom_days: input.custom_days,
+    // Null instead of undefined so incrementalPatch clears a stale day count
+    // when the billing period stops being custom.
+    custom_days: input.custom_days ?? null,
     id: input.id,
     kind: input.kind,
     organization_id: activeOrganizationId,

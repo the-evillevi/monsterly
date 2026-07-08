@@ -65,7 +65,17 @@ export function SubscriptionListSection({
                     </dd>
                   </div>
                 </dl>
-                <RenewSubscriptionControl subscription={subscription} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <RenewSubscriptionControl subscription={subscription} />
+                  <Button asChild size="sm" variant="secondary">
+                    <Link
+                      aria-label={`Editar suscripción ${subscriptionKindLabels[subscription.kind]} pagada hasta ${formatDateOnlyLabel(subscription.paid_until_date)}`}
+                      to={`/subscribers/${subscriberId}/subscriptions/${subscription.id}/edit`}
+                    >
+                      Editar
+                    </Link>
+                  </Button>
+                </div>
               </Card>
             </li>
           ))}

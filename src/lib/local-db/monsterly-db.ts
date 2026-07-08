@@ -168,7 +168,7 @@ export type SubscriptionDocument = {
   _modified: string;
   billing_period: BillingPeriod;
   created_at: string;
-  custom_days?: number;
+  custom_days?: number | null;
   deleted_at?: string | null;
   id: string;
   kind: SubscriptionKind;
