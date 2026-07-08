@@ -99,6 +99,34 @@ describe('EditSubscriptionPage', () => {
     ]);
   });
 
+  it('archives the subscription after an explicit confirmation', async () => {
+    const context = await createTestDataContext();
+    await seedSubscription(context);
+
+    await renderEditSubscriptionPage('subscription-1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archivar suscripción' }));
+    expect(screen.getByText('¿Archivar esta suscripción?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(await screen.findByText('edit-subscriber')).toBeInTheDocument();
+    await expect(listSubscriptions(context)).resolves.toEqual([]);
+  });
+
+  it('keeps the subscription when the archive confirmation is cancelled', async () => {
+    const context = await createTestDataContext();
+    await seedSubscription(context);
+
+    await renderEditSubscriptionPage('subscription-1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archivar suscripción' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.getByRole('button', { name: 'Archivar suscripción' })).toBeInTheDocument();
+    await expect(listSubscriptions(context)).resolves.toMatchObject([{ id: 'subscription-1' }]);
+  });
+
   it('shows a not-found message for unknown subscriptions', async () => {
     const context = await createTestDataContext();
     await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });

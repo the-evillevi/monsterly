@@ -1,24 +1,31 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { ArchiveConfirmButton } from '@/components/archive-confirm-button';
 import { PageFrame } from '@/components/page-frame';
 import { ResourceNotFound } from '@/components/resource-not-found';
 import {
   SubscriptionForm,
   type SubscriptionFormValues,
 } from '@/components/subscriptions/subscription-form';
-import { useSaveSubscription } from '@/lib/data/use-subscription-commands';
+import { useArchiveSubscription, useSaveSubscription } from '@/lib/data/use-subscription-commands';
 import { useSubscriber } from '@/lib/data/use-subscriber-summaries';
 
 export function EditSubscriptionPage() {
   const { id = '', subscriptionId = '' } = useParams();
   const navigate = useNavigate();
   const save = useSaveSubscription();
+  const archive = useArchiveSubscription();
   const { isLoading, subscriber } = useSubscriber(id);
   const subscription =
     subscriber?.subscriptions.find((candidate) => candidate.id === subscriptionId) ?? null;
 
   async function handleSubmit(values: SubscriptionFormValues) {
     await save({ id: subscriptionId, subscriber_id: id, ...values });
+    navigate(`/subscribers/${id}/edit`);
+  }
+
+  async function handleArchive() {
+    await archive(subscriptionId);
     navigate(`/subscribers/${id}/edit`);
   }
 
@@ -46,6 +53,13 @@ export function EditSubscriptionPage() {
               paid_until_date: subscription.paid_until_date,
               start_date: subscription.start_date,
             }}
+            footer={
+              <ArchiveConfirmButton
+                confirmPrompt="¿Archivar esta suscripción?"
+                label="Archivar suscripción"
+                onArchive={handleArchive}
+              />
+            }
             onSubmit={handleSubmit}
             submitLabel="Guardar"
           />
