@@ -30,6 +30,21 @@ export const subscriberGenders = ['female', 'male', 'non_binary', 'unspecified']
 
 export type SubscriberGender = (typeof subscriberGenders)[number];
 
+export const subscriptionKinds = ['gym', 'crossfit'] as const;
+
+export type SubscriptionKind = (typeof subscriptionKinds)[number];
+
+export const billingPeriods = [
+  'weekly',
+  'monthly',
+  'bimonthly',
+  'six_monthly',
+  'yearly',
+  'custom',
+] as const;
+
+export type BillingPeriod = (typeof billingPeriods)[number];
+
 export const subscriberSchemaLiteral = {
   title: 'subscriber schema',
   version: 0,
@@ -74,10 +89,10 @@ export const subscriptionSchemaLiteral = {
     id: { type: 'string', maxLength: 100 },
     organization_id: { type: 'string', maxLength: 100 },
     subscriber_id: { type: 'string', maxLength: 100 },
-    kind: { type: 'string', enum: ['gym', 'crossfit'] },
+    kind: { type: 'string', enum: subscriptionKinds },
     billing_period: {
       type: 'string',
-      enum: ['weekly', 'monthly', 'bimonthly', 'six_monthly', 'yearly', 'custom'],
+      enum: billingPeriods,
     },
     custom_days: { type: ['integer', 'null'], minimum: 1 },
     plan_name: { type: ['string', 'null'], maxLength: 200 },
@@ -162,12 +177,12 @@ export type SubscriberDocument = {
 export type SubscriptionDocument = {
   _deleted: boolean;
   _modified: string;
-  billing_period: 'weekly' | 'monthly' | 'bimonthly' | 'six_monthly' | 'yearly' | 'custom';
+  billing_period: BillingPeriod;
   created_at: string;
-  custom_days?: number;
+  custom_days?: number | null;
   deleted_at?: string | null;
   id: string;
-  kind: 'gym' | 'crossfit';
+  kind: SubscriptionKind;
   organization_id: string;
   paid_until_date: string;
   plan_name?: string | null;

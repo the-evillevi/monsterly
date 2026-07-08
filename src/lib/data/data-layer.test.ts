@@ -20,7 +20,7 @@ import {
 import { seedDemoSubscribers } from './seed-demo-subscribers';
 import { archiveSubscriber, saveSubscriber } from './subscribers.commands';
 import { listSubscribers, watchSubscriber, watchSubscribers } from './subscribers.queries';
-import { recordRenewal, saveSubscription } from './subscriptions.commands';
+import { recordRenewal, renewSubscription, saveSubscription } from './subscriptions.commands';
 import {
   listRenewals,
   listSubscriptions,
@@ -398,6 +398,137 @@ describe('RxDB data layer', () => {
       }),
     ).rejects.toThrow('Subscription must belong to the active organization.');
     await expect(listRenewals(organizationOne)).resolves.toEqual([]);
+  });
+
+  it('clears the stored custom days when the billing period stops being custom', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'custom',
+      custom_days: 10,
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-07-14',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-08-04',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    const [subscription] = await listSubscriptions(context);
+    expect(subscription?.billing_period).toBe('monthly');
+    expect(subscription?.custom_days).toBeNull();
+  });
+
+  it('renews an active subscription from its paid-until date and records the renewal', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-07-20',
+      start_date: '2026-07-01',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await renewSubscription(context, {
+      billing_period: 'monthly',
+      subscription_id: 'subscription-1',
+      today: new Date(2026, 6, 4),
+    });
+
+    await expect(listSubscriptions(context)).resolves.toMatchObject([
+      { id: 'subscription-1', paid_until_date: '2026-08-20' },
+    ]);
+    await expect(listRenewals(context)).resolves.toMatchObject([
+      {
+        new_paid_until_date: '2026-08-20',
+        previous_paid_until_date: '2026-07-20',
+        subscription_id: 'subscription-1',
+      },
+    ]);
+  });
+
+  it('renews an expired subscription from today', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-06-20',
+      start_date: '2026-05-20',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await renewSubscription(context, {
+      billing_period: 'weekly',
+      subscription_id: 'subscription-1',
+      today: new Date(2026, 6, 4),
+    });
+
+    await expect(listSubscriptions(context)).resolves.toMatchObject([
+      // The one-off weekly renewal does not change the stored billing period.
+      { billing_period: 'monthly', id: 'subscription-1', paid_until_date: '2026-07-11' },
+    ]);
+    await expect(listRenewals(context)).resolves.toMatchObject([
+      { new_paid_until_date: '2026-07-11', previous_paid_until_date: '2026-06-20' },
+    ]);
+  });
+
+  it('renews custom periods using the given day count', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'custom',
+      custom_days: 10,
+      id: 'subscription-1',
+      kind: 'crossfit',
+      paid_until_date: '2026-07-20',
+      start_date: '2026-07-10',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await renewSubscription(context, {
+      billing_period: 'custom',
+      custom_days: 15,
+      subscription_id: 'subscription-1',
+      today: new Date(2026, 6, 4),
+    });
+
+    await expect(listSubscriptions(context)).resolves.toMatchObject([
+      { id: 'subscription-1', paid_until_date: '2026-08-04' },
+    ]);
+  });
+
+  it('rejects renewing subscriptions outside the active organization', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const organizationTwo = await createTestContext('organization-2');
+    await saveSubscriber(organizationOne, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(organizationOne, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-07-20',
+      start_date: '2026-07-01',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await expect(
+      renewSubscription(organizationTwo, {
+        billing_period: 'monthly',
+        subscription_id: 'subscription-1',
+      }),
+    ).rejects.toThrow('Subscription must belong to the active organization.');
+    await expect(listRenewals(organizationTwo)).resolves.toEqual([]);
   });
 
   it('keeps demo and sync organizations in separate local databases', () => {

@@ -1,3 +1,6 @@
+import { parseDateOnly } from './date-only';
+import { subscriptionKindLabels } from './subscription-kind';
+
 export type SubscriptionStatus = 'Al corriente' | 'Por vencer' | 'Vencido';
 
 export type SubscriberStatus = SubscriptionStatus | 'Sin suscripción';
@@ -79,7 +82,7 @@ function getSubscriberStatus(
 }
 
 function getSubscriptionStatus(paidUntilDate: string, today: Date): SubscriptionStatus {
-  const paidUntil = startOfDay(new Date(`${paidUntilDate}T00:00:00`));
+  const paidUntil = startOfDay(parseDateOnly(paidUntilDate));
   const currentDay = startOfDay(today);
   const warningLimit = new Date(currentDay);
   warningLimit.setDate(warningLimit.getDate() + warningWindowDays);
@@ -110,7 +113,7 @@ function formatPaidUntilLabel(paidUntilDate?: string) {
     return 'Sin suscripción';
   }
 
-  const date = new Date(`${paidUntilDate}T00:00:00`);
+  const date = parseDateOnly(paidUntilDate);
 
   return new Intl.DateTimeFormat('en', {
     day: '2-digit',
@@ -123,11 +126,11 @@ function getPlanLabels(subscriptions: SubscriptionSummarySource[]): Subscription
   const plans: SubscriptionPlan[] = [];
 
   if (kinds.has('gym')) {
-    plans.push('Gym');
+    plans.push(subscriptionKindLabels.gym);
   }
 
   if (kinds.has('crossfit')) {
-    plans.push('CrossFit');
+    plans.push(subscriptionKindLabels.crossfit);
   }
 
   return plans;

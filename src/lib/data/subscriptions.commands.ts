@@ -1,3 +1,4 @@
+import { nextPaidUntilDate } from '@/lib/domain/billing-period';
 import type { RenewalDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
 import { activeRecordSelector } from './active-records';
@@ -5,7 +6,7 @@ import type { DataModuleContext } from './data-layer-context';
 
 export type SaveSubscriptionInput = {
   billing_period: SubscriptionDocument['billing_period'];
-  custom_days?: number;
+  custom_days?: number | null;
   id: string;
   kind: SubscriptionDocument['kind'];
   paid_until_date: string;
@@ -51,7 +52,9 @@ export async function saveSubscription(
     _deleted: false,
     _modified: now,
     billing_period: input.billing_period,
-    custom_days: input.custom_days,
+    // Null instead of undefined so incrementalPatch clears a stale day count
+    // when the billing period stops being custom.
+    custom_days: input.custom_days ?? null,
     id: input.id,
     kind: input.kind,
     organization_id: activeOrganizationId,
@@ -75,6 +78,64 @@ export async function saveSubscription(
   await db.subscriptions.insert(createdSubscription);
 
   return createdSubscription;
+}
+
+export type RenewSubscriptionInput = {
+  billing_period: SubscriptionDocument['billing_period'];
+  custom_days?: number | null;
+  subscription_id: string;
+  today?: Date;
+};
+
+export async function renewSubscription(context: DataModuleContext, input: RenewSubscriptionInput) {
+  const { activeOrganizationId, db } = context;
+  const subscriptionDocument = await db.subscriptions
+    .findOne({
+      selector: {
+        ...activeRecordSelector(activeOrganizationId),
+        id: input.subscription_id,
+      },
+    })
+    .exec();
+
+  if (!subscriptionDocument) {
+    throw new Error('Subscription must belong to the active organization.');
+  }
+
+  const subscription = subscriptionDocument.toJSON();
+  // The chosen period only drives the date math; the stored billing_period is
+  // edited through saveSubscription, not through renewals.
+  const newPaidUntilDate = nextPaidUntilDate(
+    subscription.paid_until_date,
+    input.billing_period,
+    input.custom_days,
+    input.today,
+  );
+
+  const updated = await saveSubscription(context, {
+    billing_period: subscription.billing_period,
+    custom_days: subscription.custom_days,
+    id: subscription.id,
+    kind: subscription.kind,
+    paid_until_date: newPaidUntilDate,
+    start_date: subscription.start_date,
+    subscriber_id: subscription.subscriber_id,
+  });
+
+  try {
+    await recordRenewal(context, {
+      id: crypto.randomUUID(),
+      new_paid_until_date: newPaidUntilDate,
+      previous_paid_until_date: subscription.paid_until_date,
+      subscription_id: subscription.id,
+    });
+  } catch (renewalError) {
+    // The subscription is already renewed; failing here would make the UI
+    // report an error and invite a retry that extends the period twice.
+    console.error('Failed to record the renewal history entry.', renewalError);
+  }
+
+  return updated;
 }
 
 export async function recordRenewal(

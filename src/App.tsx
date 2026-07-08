@@ -7,6 +7,8 @@ import { SubscriberList } from '@/components/subscribers/subscriber-list';
 import { SyncStatus } from '@/components/sync-status';
 import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
 import { NewSubscriberPage } from '@/pages/new-subscriber-page';
+import { EditSubscriptionPage } from '@/pages/edit-subscription-page';
+import { NewSubscriptionPage } from '@/pages/new-subscription-page';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 import { cn } from '@/lib/utils';
 
@@ -145,6 +147,11 @@ function App() {
           <Route path="/subscribers" element={<SubscribersPage />} />
           <Route path="/subscribers/new" element={<NewSubscriberPage />} />
           <Route path="/subscribers/:id/edit" element={<EditSubscriberPage />} />
+          <Route path="/subscribers/:id/subscriptions/new" element={<NewSubscriptionPage />} />
+          <Route
+            path="/subscribers/:id/subscriptions/:subscriptionId/edit"
+            element={<EditSubscriptionPage />}
+          />
           <Route path="/vencidos" element={<VencidosPage />} />
           <Route path="/por-vencer" element={<PorVencerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
