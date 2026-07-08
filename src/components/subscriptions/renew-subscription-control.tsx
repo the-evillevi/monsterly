@@ -56,16 +56,14 @@ export function RenewSubscriptionControl({ subscription }: RenewSubscriptionCont
 
   if (!isOpen) {
     return (
-      <div>
-        <Button onClick={handleOpen} size="sm" type="button" variant="outline">
-          Renovar
-        </Button>
-      </div>
+      <Button onClick={handleOpen} size="sm" type="button" variant="default">
+        Renovar
+      </Button>
     );
   }
 
   return (
-    <div className="grid gap-3 border-t pt-3">
+    <div className="grid w-full gap-3 border-t pt-3">
       <Field>
         <FieldLabel htmlFor={`renew-period-${subscription.id}`}>Renovar por</FieldLabel>
         <BillingPeriodSelect
@@ -114,7 +112,7 @@ export function RenewSubscriptionControl({ subscription }: RenewSubscriptionCont
           onClick={() => setIsOpen(false)}
           size="sm"
           type="button"
-          variant="ghost"
+          variant="destructive"
         >
           Cancelar
         </Button>
