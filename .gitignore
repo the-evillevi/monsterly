@@ -11,3 +11,5 @@ dist/
 # is committed.
 scripts/data/*.json
 !scripts/data/membresias.example.json
+# Transient data migrations generated from the real data are never committed.
+supabase/migrations/*_transient_import_*.sql
