@@ -70,9 +70,9 @@ describe('SubscriberList', () => {
     expect(screen.getByText('Gym')).toBeInTheDocument();
     expect(screen.getByText('CrossFit')).toBeInTheDocument();
     // The edit link routes by slug, never by the primary key.
-    expect(
-      screen.getByRole('link', { name: 'Editar Mariana Soto' }).getAttribute('href'),
-    ).toMatch(/^\/subscribers\/mariana-soto-[a-z2-9]{4}\/edit$/);
+    expect(screen.getByRole('link', { name: 'Editar Mariana Soto' }).getAttribute('href')).toMatch(
+      /^\/subscribers\/mariana-soto-[a-z2-9]{4}\/edit$/,
+    );
   });
 
   it('shows a single Sin suscripción badge and no plan badges without subscriptions', async () => {

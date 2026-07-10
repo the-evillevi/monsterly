@@ -326,10 +326,7 @@ commit;
 }
 
 function migrationVersion(date = new Date()) {
-  return date
-    .toISOString()
-    .replace(/[-:T]/g, '')
-    .slice(0, 14);
+  return date.toISOString().replace(/[-:T]/g, '').slice(0, 14);
 }
 
 async function main() {

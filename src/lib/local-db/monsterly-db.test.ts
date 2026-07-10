@@ -138,9 +138,7 @@ describe('Monsterly local RxDB database', () => {
       deleted_at: undefined,
     });
 
-    const subscriber = await db.subscribers
-      .findOne('019f4d3f-1b56-72f7-a22b-97c3125488f0')
-      .exec();
+    const subscriber = await db.subscribers.findOne('019f4d3f-1b56-72f7-a22b-97c3125488f0').exec();
 
     expect(subscriber?.slug).toBe('dulce-palomino-garcia-4x2b');
     expect(subscriber?.check_in_code).toBe('482913');
@@ -193,7 +191,6 @@ describe('Monsterly local RxDB database', () => {
     });
 
     await v0Database.addCollections({
-      // @ts-expect-error the v0 literal intentionally lacks the v1 fields
       subscribers: { schema: subscriberSchemaV0 },
     });
 

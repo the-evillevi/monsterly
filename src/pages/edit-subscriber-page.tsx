@@ -49,7 +49,8 @@ export function EditSubscriberPage() {
         <div className="grid gap-6">
           {subscriber.check_in_code ? (
             <p className="text-sm text-muted-foreground">
-              Código de acceso: <strong className="text-foreground">{subscriber.check_in_code}</strong>
+              Código de acceso:{' '}
+              <strong className="text-foreground">{subscriber.check_in_code}</strong>
             </p>
           ) : null}
           <SubscriberForm
