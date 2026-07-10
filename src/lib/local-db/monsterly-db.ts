@@ -47,7 +47,7 @@ export type BillingPeriod = (typeof billingPeriods)[number];
 
 export const subscriberSchemaLiteral = {
   title: 'subscriber schema',
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   additionalProperties: false,
@@ -55,6 +55,12 @@ export const subscriberSchemaLiteral = {
     id: { type: 'string', maxLength: 100 },
     organization_id: { type: 'string', maxLength: 100 },
     name: { type: 'string', maxLength: 200 },
+    paternal_last_name: { type: ['string', 'null'], maxLength: 100 },
+    maternal_last_name: { type: ['string', 'null'], maxLength: 100 },
+    // Optional during rollout: pre-EVL-105 docs receive their slug and PIN
+    // through pull replication after the server-side backfill.
+    slug: { type: ['string', 'null'], maxLength: 220 },
+    check_in_code: { type: ['string', 'null'], maxLength: 6 },
     gender: { type: 'string', enum: subscriberGenders },
     phone_number: { type: ['string', 'null'], maxLength: 40 },
     created_at: timestampSchema,
@@ -164,13 +170,17 @@ export const renewalSchemaLiteral = {
 export type SubscriberDocument = {
   _deleted: boolean;
   _modified: string;
+  check_in_code?: string | null;
   created_at: string;
   deleted_at?: string | null;
   gender: SubscriberGender;
   id: string;
+  maternal_last_name?: string | null;
   name: string;
   organization_id: string;
+  paternal_last_name?: string | null;
   phone_number?: string | null;
+  slug?: string | null;
   updated_at: string;
 };
 
@@ -260,6 +270,12 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
     },
     subscribers: {
       schema: subscriberSchema,
+      migrationStrategies: {
+        // v0 -> v1 adds the optional name-split and identifier fields; values
+        // arrive via pull replication after the server-side backfill, so local
+        // generation here would only diverge from the server's.
+        1: (oldDocument) => oldDocument,
+      },
     },
     subscriptions: {
       schema: subscriptionSchema,
