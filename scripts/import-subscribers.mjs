@@ -1,7 +1,12 @@
 #!/usr/bin/env node
-// Idempotent importer for the operator's spreadsheet export. Upserts subscribers
-// and their subscriptions into Supabase using the service-role key and
-// deterministic `import-<slug>` ids, so re-running it changes no row counts.
+// Idempotent importer for the operator's spreadsheet export. Inserts subscribers
+// and their subscriptions into Supabase using the service-role key. Members are
+// matched by normalized full name: rows that already exist are skipped, so
+// re-running the script changes no row counts (and can never resurrect rows
+// re-keyed away by EVL-105).
+//
+// New rows get the same three-tier identity as app-created ones: a UUIDv7 id,
+// a unique slug, and a numeric check-in PIN.
 //
 // Usage:
 //   SUPABASE_URL=... \
@@ -14,13 +19,17 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { webcrypto } from 'node:crypto';
 
 import { createClient } from '@supabase/supabase-js';
+import { v7 as uuidv7 } from 'uuid';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DATA_PATH = resolve(scriptDir, 'data/membresias-2026-07.json');
 
-/** Accent-insensitive, url-safe slug used to build deterministic ids. */
+const SLUG_SUFFIX_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+
+/** Accent-insensitive, url-safe slug base for the readable identifier. */
 export function slugify(name) {
   return String(name)
     .trim()
@@ -47,35 +56,73 @@ export function toBillingPeriod(amount) {
   return Number(amount) === 0 ? 'yearly' : 'monthly';
 }
 
+/** Whitespace-normalized name used to match spreadsheet rows to DB rows. */
+export function normalizeName(name) {
+  return String(name ?? '')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+export function randomSlugSuffix(length = 4) {
+  const bytes = webcrypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes, (byte) => SLUG_SUFFIX_ALPHABET[byte % SLUG_SUFFIX_ALPHABET.length]).join(
+    '',
+  );
+}
+
+export function randomCheckInCode() {
+  const digits = webcrypto.getRandomValues(new Uint8Array(6));
+  return Array.from(digits, (byte, index) =>
+    index === 0 ? String((byte % 9) + 1) : String(byte % 10),
+  ).join('');
+}
+
 /**
- * Turn cleaned spreadsheet rows into subscriber + subscription records.
- * Throws on a slug collision so duplicate names never silently overwrite.
+ * Turn cleaned spreadsheet rows into subscriber + subscription records with
+ * three-tier identifiers, skipping members that already exist (matched by
+ * normalized name). Throws on duplicate names within the file so two people
+ * can never silently collapse into one row.
  */
-export function buildImportRows(records, organizationId) {
+export function buildImportRows(
+  records,
+  organizationId,
+  {
+    existingNames = new Set(),
+    newId = uuidv7,
+    slugSuffix = randomSlugSuffix,
+    checkInCode = randomCheckInCode,
+  } = {},
+) {
   const seen = new Set();
   const subscribers = [];
   const subscriptions = [];
+  let skipped = 0;
 
   for (const record of records) {
-    const name = String(record.nombre).trim();
+    const name = normalizeName(record.nombre);
     const planName = String(record.membresia).trim();
-    const slug = slugify(name);
 
-    if (seen.has(slug)) {
-      throw new Error(`Duplicate import slug "${slug}" for "${name}"; ids would collide.`);
+    if (seen.has(name)) {
+      throw new Error(`Duplicate member "${name}"; make the names distinguishable first.`);
     }
-    seen.add(slug);
+    seen.add(name);
 
-    const subscriberId = `import-${slug}`;
-    const subscriptionId = `import-${slug}-sub`;
-    // Deterministic timestamp so re-running the import is byte-stable, not just
-    // count-stable. Triggers set _modified on the server side.
+    if (existingNames.has(name)) {
+      skipped += 1;
+      continue;
+    }
+
+    const subscriberId = newId();
+    // Deterministic timestamp so re-generated rows stay byte-stable. Triggers
+    // set _modified on the server side.
     const timestamp = `${record.fecha_inicio}T00:00:00Z`;
 
     subscribers.push({
       id: subscriberId,
       organization_id: organizationId,
       name,
+      slug: `${slugify(name)}-${slugSuffix()}`,
+      check_in_code: checkInCode(),
       gender: 'unspecified',
       phone_number: cleanPhoneNumber(record.telefono),
       created_at: timestamp,
@@ -85,7 +132,7 @@ export function buildImportRows(records, organizationId) {
     });
 
     subscriptions.push({
-      id: subscriptionId,
+      id: newId(),
       organization_id: organizationId,
       subscriber_id: subscriberId,
       kind: toKind(planName),
@@ -102,7 +149,7 @@ export function buildImportRows(records, organizationId) {
     });
   }
 
-  return { subscribers, subscriptions };
+  return { skipped, subscribers, subscriptions };
 }
 
 async function main() {
@@ -121,35 +168,40 @@ async function main() {
   }
 
   const records = JSON.parse(readFileSync(dataPath, 'utf8'));
-  const { subscribers, subscriptions } = buildImportRows(records, organizationId);
 
   const client = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const subscriberResult = await client
+  const existingResult = await client
     .from('subscribers')
-    .upsert(subscribers, { onConflict: 'id' });
-  if (subscriberResult.error) {
-    throw new Error(`Subscriber upsert failed: ${subscriberResult.error.message}`);
-  }
-
-  const subscriptionResult = await client
-    .from('subscriptions')
-    .upsert(subscriptions, { onConflict: 'id' });
-  if (subscriptionResult.error) {
-    throw new Error(`Subscription upsert failed: ${subscriptionResult.error.message}`);
-  }
-
-  const { count } = await client
-    .from('subscribers')
-    .select('id', { count: 'exact', head: true })
+    .select('name')
     .eq('organization_id', organizationId)
-    .like('id', 'import-%');
+    .eq('_deleted', false);
+  if (existingResult.error) {
+    throw new Error(`Subscriber lookup failed: ${existingResult.error.message}`);
+  }
+
+  const existingNames = new Set(existingResult.data.map((row) => normalizeName(row.name)));
+  const { skipped, subscribers, subscriptions } = buildImportRows(records, organizationId, {
+    existingNames,
+  });
+
+  if (subscribers.length > 0) {
+    const subscriberResult = await client.from('subscribers').insert(subscribers);
+    if (subscriberResult.error) {
+      throw new Error(`Subscriber insert failed: ${subscriberResult.error.message}`);
+    }
+
+    const subscriptionResult = await client.from('subscriptions').insert(subscriptions);
+    if (subscriptionResult.error) {
+      throw new Error(`Subscription insert failed: ${subscriptionResult.error.message}`);
+    }
+  }
 
   console.log(
-    `Imported ${subscribers.length} subscribers + ${subscriptions.length} subscriptions ` +
-      `into org ${organizationId}. Imported rows now in DB: ${count}.`,
+    `Imported ${subscribers.length} new subscribers (+${subscriptions.length} subscriptions) ` +
+      `into org ${organizationId}; skipped ${skipped} already present.`,
   );
 }
 
