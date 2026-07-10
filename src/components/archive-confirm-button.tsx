@@ -33,7 +33,7 @@ export function ArchiveConfirmButton({
   if (!isConfirming) {
     return (
       <div className="border-t pt-4">
-        <Button onClick={() => setIsConfirming(true)} type="button" variant="default">
+        <Button onClick={() => setIsConfirming(true)} type="button" variant="destructive">
           {label}
         </Button>
       </div>
