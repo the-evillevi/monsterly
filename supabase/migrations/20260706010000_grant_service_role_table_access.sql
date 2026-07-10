@@ -1,9 +1,8 @@
--- The service role bypasses RLS but still needs table-level privileges, and
--- this project's default privileges never granted it DML on these tables
--- (only authenticated got grants in 20260630220000). Trusted server-side
--- tooling such as scripts/import-subscribers.mjs relies on these grants.
-grant usage on schema public to service_role;
-grant select on public.organizations to service_role;
-grant select, insert, update on public.subscribers to service_role;
-grant select, insert, update on public.subscriptions to service_role;
-grant select, insert, update on public.renewals to service_role;
+-- The service role bypasses RLS but still needs table-level DML grants, which
+-- the core-tables migration only gave to `authenticated`. Grant them so the
+-- import script and future server-side tooling can read and write directly.
+grant select, insert, update, delete on public.organizations to service_role;
+grant select, insert, update, delete on public.organization_members to service_role;
+grant select, insert, update, delete on public.subscribers to service_role;
+grant select, insert, update, delete on public.subscriptions to service_role;
+grant select, insert, update, delete on public.renewals to service_role;

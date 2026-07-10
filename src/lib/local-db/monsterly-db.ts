@@ -263,9 +263,10 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
     },
     subscriptions: {
       schema: subscriptionSchema,
-      // v1 only adds optional plan_name/price; existing docs are valid as-is.
       migrationStrategies: {
-        1: (doc) => doc,
+        // v0 -> v1 adds the optional plan_name/price fields; existing rows need
+        // no transformation, so upgrade them in place untouched.
+        1: (oldDocument) => oldDocument,
       },
     },
   });

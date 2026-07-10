@@ -1,135 +1,163 @@
-// Idempotent one-off importer: upserts subscribers and their subscriptions
-// from a JSON export of the legacy membership spreadsheet into Supabase.
+#!/usr/bin/env node
+// Idempotent importer for the operator's spreadsheet export. Upserts subscribers
+// and their subscriptions into Supabase using the service-role key and
+// deterministic `import-<slug>` ids, so re-running it changes no row counts.
 //
 // Usage:
-//   SUPABASE_URL=... SUPABASE_SECRET_KEY=... MONSTERLY_ORGANIZATION_ID=... \
-//     node scripts/import-subscribers.mjs
+//   SUPABASE_URL=... \
+//   SUPABASE_SERVICE_ROLE_KEY=... \
+//   MONSTERLY_ORGANIZATION_ID=<org uuid> \
+//   node scripts/import-subscribers.mjs [path/to/membresias.json]
 //
-// SUPABASE_SECRET_KEY must be the service-role key: RLS only allows writes
-// from authenticated organization members, which this script is not.
-// The data file (see scripts/data/membresias.example.json for the shape) is
-// gitignored because it contains real names and phone numbers.
-import { readFile } from 'node:fs/promises';
+// Defaults to scripts/data/membresias-2026-07.json when no path is given.
+
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
 import { createClient } from '@supabase/supabase-js';
 
-function required(name) {
-  const value = process.env[name];
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const DEFAULT_DATA_PATH = resolve(scriptDir, 'data/membresias-2026-07.json');
 
-  if (!value) {
-    console.error(`Missing required env var ${name}.`);
-    process.exit(1);
-  }
-
-  return value;
-}
-
-const url = required('SUPABASE_URL');
-const secretKey = required('SUPABASE_SECRET_KEY');
-const organizationId = required('MONSTERLY_ORGANIZATION_ID');
-const dataFile =
-  process.env.DATA_FILE ?? new URL('./data/membresias-2026-07.json', import.meta.url);
-
-function slug(name) {
-  return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+/** Accent-insensitive, url-safe slug used to build deterministic ids. */
+export function slugify(name) {
+  return String(name)
+    .trim()
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
 
-function cleanPhone(telefono) {
-  const digits = (telefono ?? '').replace(/\D/g, '');
-
-  return /^\d{10,15}$/.test(digits) ? digits : null;
+/** Keep a phone only when it has 10-15 digits; otherwise drop it. */
+export function cleanPhoneNumber(raw) {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 15 ? digits : null;
 }
 
-async function must(promise, label) {
-  const { data, error } = await promise;
+/** "Programación" is the CrossFit plan; everything else is gym. */
+export function toKind(planName) {
+  return String(planName).trim() === 'Programación' ? 'crossfit' : 'gym';
+}
 
-  if (error) {
-    console.error(`${label} failed: ${error.message}`);
-    process.exit(1);
+/** A prepaid (monto 0) membership is a yearly plan; everything else monthly. */
+export function toBillingPeriod(amount) {
+  return Number(amount) === 0 ? 'yearly' : 'monthly';
+}
+
+/**
+ * Turn cleaned spreadsheet rows into subscriber + subscription records.
+ * Throws on a slug collision so duplicate names never silently overwrite.
+ */
+export function buildImportRows(records, organizationId) {
+  const seen = new Set();
+  const subscribers = [];
+  const subscriptions = [];
+
+  for (const record of records) {
+    const name = String(record.nombre).trim();
+    const planName = String(record.membresia).trim();
+    const slug = slugify(name);
+
+    if (seen.has(slug)) {
+      throw new Error(`Duplicate import slug "${slug}" for "${name}"; ids would collide.`);
+    }
+    seen.add(slug);
+
+    const subscriberId = `import-${slug}`;
+    const subscriptionId = `import-${slug}-sub`;
+    // Deterministic timestamp so re-running the import is byte-stable, not just
+    // count-stable. Triggers set _modified on the server side.
+    const timestamp = `${record.fecha_inicio}T00:00:00Z`;
+
+    subscribers.push({
+      id: subscriberId,
+      organization_id: organizationId,
+      name,
+      gender: 'unspecified',
+      phone_number: cleanPhoneNumber(record.telefono),
+      created_at: timestamp,
+      updated_at: timestamp,
+      deleted_at: null,
+      _deleted: false,
+    });
+
+    subscriptions.push({
+      id: subscriptionId,
+      organization_id: organizationId,
+      subscriber_id: subscriberId,
+      kind: toKind(planName),
+      billing_period: toBillingPeriod(record.monto),
+      custom_days: null,
+      plan_name: planName,
+      price: Number(record.monto),
+      start_date: record.fecha_inicio,
+      paid_until_date: record.vencimiento,
+      created_at: timestamp,
+      updated_at: timestamp,
+      deleted_at: null,
+      _deleted: false,
+    });
   }
 
-  return data;
+  return { subscribers, subscriptions };
 }
 
-const entries = JSON.parse(await readFile(dataFile, 'utf8'));
+async function main() {
+  const url = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const organizationId = process.env.MONSTERLY_ORGANIZATION_ID;
+  const dataPath = process.argv[2] ? resolve(process.argv[2]) : DEFAULT_DATA_PATH;
 
-const seenSlugs = new Set();
-for (const entry of entries) {
-  const entrySlug = slug(entry.nombre.trim());
-
-  if (seenSlugs.has(entrySlug)) {
-    console.error(`Duplicate id slug "${entrySlug}"; make the names distinguishable first.`);
-    process.exit(1);
+  const missing = [
+    url ? null : 'SUPABASE_URL',
+    serviceRoleKey ? null : 'SUPABASE_SERVICE_ROLE_KEY',
+    organizationId ? null : 'MONSTERLY_ORGANIZATION_ID',
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    throw new Error(`Missing required env: ${missing.join(', ')}`);
   }
 
-  seenSlugs.add(entrySlug);
-}
+  const records = JSON.parse(readFileSync(dataPath, 'utf8'));
+  const { subscribers, subscriptions } = buildImportRows(records, organizationId);
 
-const client = createClient(url, secretKey, { auth: { persistSession: false } });
+  const client = createClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
-const organization = await must(
-  client.from('organizations').select('id, name').eq('id', organizationId).maybeSingle(),
-  'Organization lookup',
-);
+  const subscriberResult = await client
+    .from('subscribers')
+    .upsert(subscribers, { onConflict: 'id' });
+  if (subscriberResult.error) {
+    throw new Error(`Subscriber upsert failed: ${subscriberResult.error.message}`);
+  }
 
-if (!organization) {
-  console.error(
-    `Organization ${organizationId} not found. Create it first:\n` +
-      `  insert into public.organizations (id, name) values ('${organizationId}', '<name>');`,
-  );
-  process.exit(1);
-}
+  const subscriptionResult = await client
+    .from('subscriptions')
+    .upsert(subscriptions, { onConflict: 'id' });
+  if (subscriptionResult.error) {
+    throw new Error(`Subscription upsert failed: ${subscriptionResult.error.message}`);
+  }
 
-const subscriberRows = entries.map((entry) => ({
-  id: `import-${slug(entry.nombre.trim())}`,
-  organization_id: organizationId,
-  name: entry.nombre.trim(),
-  gender: 'unspecified',
-  phone_number: cleanPhone(entry.telefono),
-}));
-
-// created_at/updated_at/_deleted/_modified stay unset on purpose: column
-// defaults and the set_rxdb_sync_metadata trigger own them.
-const subscriptionRows = entries.map((entry) => ({
-  id: `import-${slug(entry.nombre.trim())}-sub`,
-  organization_id: organizationId,
-  subscriber_id: `import-${slug(entry.nombre.trim())}`,
-  kind: entry.membresia.trim() === 'Programación' ? 'crossfit' : 'gym',
-  billing_period: entry.monto === 0 ? 'yearly' : 'monthly',
-  plan_name: entry.membresia.trim(),
-  price: entry.monto,
-  start_date: entry.fecha_inicio,
-  paid_until_date: entry.vencimiento,
-}));
-
-// Subscribers first: subscriptions reference them through a composite FK.
-await must(
-  client.from('subscribers').upsert(subscriberRows, { onConflict: 'id' }),
-  'Subscribers upsert',
-);
-await must(
-  client.from('subscriptions').upsert(subscriptionRows, { onConflict: 'id' }),
-  'Subscriptions upsert',
-);
-
-const today = new Date().toISOString().slice(0, 10);
-const countImported = (table) =>
-  client
-    .from(table)
+  const { count } = await client
+    .from('subscribers')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', organizationId)
     .like('id', 'import-%');
 
-const { count: subscriberCount } = await countImported('subscribers');
-const { count: subscriptionCount } = await countImported('subscriptions');
-const { count: vencidoCount } = await countImported('subscriptions').lt('paid_until_date', today);
+  console.log(
+    `Imported ${subscribers.length} subscribers + ${subscriptions.length} subscriptions ` +
+      `into org ${organizationId}. Imported rows now in DB: ${count}.`,
+  );
+}
 
-console.log(`Organization: ${organization.name} (${organizationId})`);
-console.log(`Imported subscribers: ${subscriberCount}`);
-console.log(`Imported subscriptions: ${subscriptionCount}`);
-console.log(`Vencido (paid_until_date < ${today}): ${vencidoCount}`);
+// Only run the importer when executed directly, so the pure helpers above can
+// be imported by tests without touching the network.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}

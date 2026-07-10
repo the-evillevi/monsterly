@@ -20,7 +20,14 @@ import {
 import { seedDemoSubscribers } from './seed-demo-subscribers';
 import { archiveSubscriber, saveSubscriber } from './subscribers.commands';
 import { listSubscribers, watchSubscriber, watchSubscribers } from './subscribers.queries';
-import { recordRenewal, renewSubscription, saveSubscription } from './subscriptions.commands';
+import { buildSubscriberSummaries } from '@/lib/domain/subscriber-summaries';
+
+import {
+  archiveSubscription,
+  recordRenewal,
+  renewSubscription,
+  saveSubscription,
+} from './subscriptions.commands';
 import {
   listRenewals,
   listSubscriptions,
@@ -529,6 +536,89 @@ describe('RxDB data layer', () => {
       }),
     ).rejects.toThrow('Subscription must belong to the active organization.');
     await expect(listRenewals(organizationTwo)).resolves.toEqual([]);
+  });
+
+  it('archives a subscription with a soft delete that keeps the row replicable', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-08-04',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await archiveSubscription(context, 'subscription-1');
+
+    await expect(listSubscriptions(context)).resolves.toEqual([]);
+
+    const rawDocument = await context.db.subscriptions
+      .findOne({ selector: { id: 'subscription-1' } })
+      .exec();
+    expect(rawDocument).not.toBeNull();
+    expect(rawDocument?.deleted).toBe(false);
+    expect(rawDocument?.toJSON().deleted_at).toBeTruthy();
+  });
+
+  it('keeps the subscriber active when another subscription remains after archiving', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2099-01-01',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+    await saveSubscription(context, {
+      billing_period: 'weekly',
+      id: 'subscription-2',
+      kind: 'crossfit',
+      paid_until_date: '2099-01-01',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await archiveSubscription(context, 'subscription-1');
+
+    const [summaryWithRemaining] = buildSubscriberSummaries({
+      subscribers: await listSubscribers(context),
+      subscriptions: await listSubscriptions(context),
+    });
+    expect(summaryWithRemaining).toMatchObject({ plans: ['CrossFit'], status: 'Al corriente' });
+
+    await archiveSubscription(context, 'subscription-2');
+
+    const [summaryWithoutSubscriptions] = buildSubscriberSummaries({
+      subscribers: await listSubscribers(context),
+      subscriptions: await listSubscriptions(context),
+    });
+    expect(summaryWithoutSubscriptions).toMatchObject({ status: 'Sin suscripción' });
+    await expect(listSubscribers(context)).resolves.toMatchObject([{ id: 'subscriber-1' }]);
+  });
+
+  it('rejects archiving subscriptions outside the active organization', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const organizationTwo = await createTestContext('organization-2');
+    await saveSubscriber(organizationOne, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(organizationOne, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-08-04',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    await expect(archiveSubscription(organizationTwo, 'subscription-1')).rejects.toThrow(
+      'Subscription must belong to the active organization.',
+    );
+    await expect(listSubscriptions(organizationOne)).resolves.toMatchObject([
+      { id: 'subscription-1' },
+    ]);
   });
 
   it('keeps demo and sync organizations in separate local databases', () => {

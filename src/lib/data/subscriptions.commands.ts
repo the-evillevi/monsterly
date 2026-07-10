@@ -138,6 +138,35 @@ export async function renewSubscription(context: DataModuleContext, input: Renew
   return updated;
 }
 
+export async function archiveSubscription(
+  { activeOrganizationId, db }: DataModuleContext,
+  id: string,
+) {
+  const existing = await db.subscriptions
+    .findOne({
+      selector: {
+        id,
+        organization_id: activeOrganizationId,
+      },
+    })
+    .exec();
+
+  if (!existing) {
+    throw new Error('Subscription must belong to the active organization.');
+  }
+
+  const now = new Date().toISOString();
+
+  // deleted_at is the archive marker; _deleted stays false on purpose. Setting
+  // _deleted would make RxDB purge the document and replicate a hard delete,
+  // while deleted_at keeps the row replicating to Supabase as audit history.
+  await existing.incrementalPatch({
+    _modified: now,
+    deleted_at: now,
+    updated_at: now,
+  });
+}
+
 export async function recordRenewal(
   { activeOrganizationId, db }: DataModuleContext,
   input: SaveRenewalInput,
