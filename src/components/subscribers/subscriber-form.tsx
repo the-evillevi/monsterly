@@ -112,7 +112,7 @@ export function SubscriberForm({
         </Field>
         <FieldError>{submitError}</FieldError>
         <Field orientation="horizontal">
-          <Button asChild variant="outline">
+          <Button asChild variant="destructive">
             <Link to="/subscribers">Cancelar</Link>
           </Button>
           <Button disabled={isSubmitting} type="submit">

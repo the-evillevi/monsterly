@@ -12,7 +12,9 @@ export function ResourceNotFound({ backLabel, backTo, message }: ResourceNotFoun
   return (
     <div className="grid max-w-md gap-4 justify-items-start">
       <p className="text-muted-foreground">{message}</p>
-      <Button asChild variant="outline">
+      {/* "Volver" is neutral navigation, not a cancellation, so it follows the
+          general outline->default mapping. */}
+      <Button asChild variant="default">
         <Link to={backTo}>{backLabel}</Link>
       </Button>
     </div>

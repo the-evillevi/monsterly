@@ -33,7 +33,7 @@ export function ArchiveConfirmButton({
   if (!isConfirming) {
     return (
       <div className="border-t pt-4">
-        <Button onClick={() => setIsConfirming(true)} type="button" variant="destructive">
+        <Button onClick={() => setIsConfirming(true)} type="button" variant="default">
           {label}
         </Button>
       </div>
@@ -52,11 +52,13 @@ export function ArchiveConfirmButton({
         <Button disabled={isArchiving} onClick={handleConfirm} type="button" variant="destructive">
           Confirmar
         </Button>
+        {/* Red is reserved for the destructive Confirmar in this flow, so the
+            cancel follows the general ghost->secondary mapping instead. */}
         <Button
           disabled={isArchiving}
           onClick={() => setIsConfirming(false)}
           type="button"
-          variant="ghost"
+          variant="secondary"
         >
           Cancelar
         </Button>
