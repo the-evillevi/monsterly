@@ -1,0 +1,26 @@
+[
+  {
+    "nombre": "Ejemplo Regular",
+    "telefono": "5512345678",
+    "membresia": "Regular",
+    "fecha_inicio": "2026-07-01",
+    "vencimiento": "2026-07-31",
+    "monto": 450
+  },
+  {
+    "nombre": "Ejemplo Programación",
+    "telefono": "55 1234 5679",
+    "membresia": "Programación",
+    "fecha_inicio": "2026-06-30",
+    "vencimiento": "2026-07-31",
+    "monto": 500
+  },
+  {
+    "nombre": "Ejemplo Prepago",
+    "telefono": "123",
+    "membresia": "Fundadores",
+    "fecha_inicio": "2026-01-01",
+    "vencimiento": "2026-12-31",
+    "monto": 0
+  }
+]

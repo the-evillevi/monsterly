@@ -6,3 +6,8 @@ dist/
 !.env.example
 .DS_Store
 .claude/
+
+# Real member data (names + phone numbers) stays local; only the fake example
+# is committed.
+scripts/data/*.json
+!scripts/data/membresias.example.json
