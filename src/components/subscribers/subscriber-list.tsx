@@ -39,7 +39,7 @@ export function SubscriberList({ filterStatus }: SubscriberListProps) {
               <Button asChild size="sm" variant="ghost">
                 <Link
                   aria-label={`Editar ${subscriber.name}`}
-                  to={`/subscribers/${subscriber.id}/edit`}
+                  to={`/subscribers/${subscriber.slug ?? subscriber.id}/edit`}
                 >
                   Editar
                 </Link>

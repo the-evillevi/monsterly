@@ -19,9 +19,9 @@ async function renderEditSubscriptionPage(subscriptionId: string) {
         initialEntries={[`/subscribers/subscriber-1/subscriptions/${subscriptionId}/edit`]}
       >
         <Routes>
-          <Route path="/subscribers/:id/edit" element={<p>edit-subscriber</p>} />
+          <Route path="/subscribers/:slug/edit" element={<p>edit-subscriber</p>} />
           <Route
-            path="/subscribers/:id/subscriptions/:subscriptionId/edit"
+            path="/subscribers/:slug/subscriptions/:subscriptionId/edit"
             element={<EditSubscriptionPage />}
           />
         </Routes>

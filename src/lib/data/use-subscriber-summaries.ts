@@ -47,7 +47,7 @@ export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
   };
 }
 
-export function useSubscriber(id: string) {
+export function useSubscriber(slugOrId: string) {
   const { activeOrganizationId, db } = useContext(DataLayerContext);
   const [subscriber, setSubscriber] = useState<SubscriberWithSubscriptions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,7 +59,7 @@ export function useSubscriber(id: string) {
 
     setIsLoading(true);
 
-    const subscription = watchSubscriber({ activeOrganizationId, db }, id).subscribe(
+    const subscription = watchSubscriber({ activeOrganizationId, db }, slugOrId).subscribe(
       (nextSubscriber) => {
         setSubscriber(nextSubscriber);
         setIsLoading(false);
@@ -67,7 +67,7 @@ export function useSubscriber(id: string) {
     );
 
     return () => subscription.unsubscribe();
-  }, [activeOrganizationId, db, id]);
+  }, [activeOrganizationId, db, slugOrId]);
 
   return {
     isLoading,

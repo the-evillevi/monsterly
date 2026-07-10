@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { PageFrame } from '@/components/page-frame';
 import { ArchiveConfirmButton } from '@/components/archive-confirm-button';
@@ -12,20 +12,27 @@ import { useSubscriber } from '@/lib/data/use-subscriber-summaries';
 import { useArchiveSubscriber, useSaveSubscriber } from '@/lib/data/use-subscriber-commands';
 
 export function EditSubscriberPage() {
-  const { id = '' } = useParams();
+  const { slug = '' } = useParams();
   const navigate = useNavigate();
   const save = useSaveSubscriber();
   const archive = useArchiveSubscriber();
-  const { isLoading, subscriber } = useSubscriber(id);
+  const { isLoading, subscriber } = useSubscriber(slug);
 
   async function handleSubmit(values: SubscriberFormValues) {
-    await save({ id, ...values });
+    await save({ id: subscriber?.id, ...values });
     navigate('/subscribers');
   }
 
   async function handleArchive() {
-    await archive(id);
-    navigate('/subscribers');
+    if (subscriber) {
+      await archive(subscriber.id);
+      navigate('/subscribers');
+    }
+  }
+
+  // Old id-based URLs still resolve; send them to the canonical slug route.
+  if (subscriber?.slug && subscriber.slug !== slug) {
+    return <Navigate replace to={`/subscribers/${subscriber.slug}/edit`} />;
   }
 
   return (
@@ -40,10 +47,17 @@ export function EditSubscriberPage() {
       ) : null}
       {!isLoading && subscriber ? (
         <div className="grid gap-6">
+          {subscriber.check_in_code ? (
+            <p className="text-sm text-muted-foreground">
+              Código de acceso: <strong className="text-foreground">{subscriber.check_in_code}</strong>
+            </p>
+          ) : null}
           <SubscriberForm
             defaultValues={{
               gender: subscriber.gender,
+              maternal_last_name: subscriber.maternal_last_name ?? undefined,
               name: subscriber.name,
+              paternal_last_name: subscriber.paternal_last_name ?? undefined,
               phone_number: subscriber.phone_number ?? undefined,
             }}
             footer={
@@ -56,7 +70,10 @@ export function EditSubscriberPage() {
             onSubmit={handleSubmit}
             submitLabel="Guardar"
           />
-          <SubscriptionListSection subscriberId={id} subscriptions={subscriber.subscriptions} />
+          <SubscriptionListSection
+            subscriberSlug={subscriber.slug ?? subscriber.id}
+            subscriptions={subscriber.subscriptions}
+          />
         </div>
       ) : null}
     </PageFrame>

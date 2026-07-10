@@ -146,10 +146,10 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/subscribers" element={<SubscribersPage />} />
           <Route path="/subscribers/new" element={<NewSubscriberPage />} />
-          <Route path="/subscribers/:id/edit" element={<EditSubscriberPage />} />
-          <Route path="/subscribers/:id/subscriptions/new" element={<NewSubscriptionPage />} />
+          <Route path="/subscribers/:slug/edit" element={<EditSubscriberPage />} />
+          <Route path="/subscribers/:slug/subscriptions/new" element={<NewSubscriptionPage />} />
           <Route
-            path="/subscribers/:id/subscriptions/:subscriptionId/edit"
+            path="/subscribers/:slug/subscriptions/:subscriptionId/edit"
             element={<EditSubscriptionPage />}
           />
           <Route path="/vencidos" element={<VencidosPage />} />

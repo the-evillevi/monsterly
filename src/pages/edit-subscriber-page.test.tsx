@@ -17,7 +17,7 @@ async function renderEditPage(subscriberId: string) {
       <MemoryRouter initialEntries={[`/subscribers/${subscriberId}/edit`]}>
         <Routes>
           <Route path="/subscribers" element={<p>subscribers-list</p>} />
-          <Route path="/subscribers/:id/edit" element={<EditSubscriberPage />} />
+          <Route path="/subscribers/:slug/edit" element={<EditSubscriberPage />} />
         </Routes>
       </MemoryRouter>
     </DataLayerContext.Provider>,

@@ -10,7 +10,8 @@ import { subscriptionKindLabels } from '@/lib/domain/subscription-kind';
 import type { SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
 type SubscriptionListSectionProps = {
-  subscriberId: string;
+  // Route segment only (slug, or id as fallback); never used as an FK.
+  subscriberSlug: string;
   subscriptions: SubscriptionDocument[];
 };
 
@@ -23,7 +24,7 @@ function formatPeriodLabel(subscription: SubscriptionDocument) {
 }
 
 export function SubscriptionListSection({
-  subscriberId,
+  subscriberSlug,
   subscriptions,
 }: SubscriptionListSectionProps) {
   return (
@@ -31,7 +32,7 @@ export function SubscriptionListSection({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold text-foreground">Suscripciones</h2>
         <Button asChild size="sm">
-          <Link to={`/subscribers/${subscriberId}/subscriptions/new`}>Agregar suscripción</Link>
+          <Link to={`/subscribers/${subscriberSlug}/subscriptions/new`}>Agregar suscripción</Link>
         </Button>
       </div>
       {subscriptions.length === 0 ? (
@@ -70,7 +71,7 @@ export function SubscriptionListSection({
                   <Button asChild size="sm" variant="secondary">
                     <Link
                       aria-label={`Editar suscripción ${subscriptionKindLabels[subscription.kind]} pagada hasta ${formatDateOnlyLabel(subscription.paid_until_date)}`}
-                      to={`/subscribers/${subscriberId}/subscriptions/${subscription.id}/edit`}
+                      to={`/subscribers/${subscriberSlug}/subscriptions/${subscription.id}/edit`}
                     >
                       Editar
                     </Link>

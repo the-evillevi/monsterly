@@ -49,10 +49,17 @@ export function watchSubscribers(
 
 export function watchSubscriber(
   context: DataModuleContext,
-  id: string,
+  slugOrId: string,
 ): Observable<SubscriberWithSubscriptions | null> {
+  // Slug is the canonical route param; matching the id keeps pre-slug URLs
+  // working (the edit page redirects those to the slug form).
   return watchSubscribers(context).pipe(
-    map((subscribers) => subscribers.find((subscriber) => subscriber.id === id) ?? null),
+    map(
+      (subscribers) =>
+        subscribers.find(
+          (subscriber) => subscriber.slug === slugOrId || subscriber.id === slugOrId,
+        ) ?? null,
+    ),
   );
 }
 
