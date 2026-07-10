@@ -36,7 +36,7 @@ export function SubscriberList({ filterStatus }: SubscriberListProps) {
                   {subscriber.phoneNumber}
                 </a>
               ) : null}
-              <Button asChild size="sm" variant="ghost">
+              <Button asChild size="sm" variant="secondary">
                 <Link
                   aria-label={`Editar ${subscriber.name}`}
                   to={`/subscribers/${subscriber.id}/edit`}
