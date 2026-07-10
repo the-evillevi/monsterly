@@ -1,5 +1,14 @@
-import { createRxDatabase, type RxCollection, type RxDatabase, type RxJsonSchema } from 'rxdb';
+import {
+  addRxPlugin,
+  createRxDatabase,
+  type RxCollection,
+  type RxDatabase,
+  type RxJsonSchema,
+} from 'rxdb';
+import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
+
+addRxPlugin(RxDBMigrationSchemaPlugin);
 
 const timestampSchema = {
   type: 'string',
@@ -72,7 +81,7 @@ export const subscriberSchemaLiteral = {
 
 export const subscriptionSchemaLiteral = {
   title: 'subscription schema',
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   additionalProperties: false,
@@ -86,6 +95,8 @@ export const subscriptionSchemaLiteral = {
       enum: billingPeriods,
     },
     custom_days: { type: ['integer', 'null'], minimum: 1 },
+    plan_name: { type: ['string', 'null'], maxLength: 200 },
+    price: { type: ['number', 'null'], minimum: 0 },
     start_date: dateSchema,
     paid_until_date: dateSchema,
     created_at: timestampSchema,
@@ -174,6 +185,8 @@ export type SubscriptionDocument = {
   kind: SubscriptionKind;
   organization_id: string;
   paid_until_date: string;
+  plan_name?: string | null;
+  price?: number | null;
   start_date: string;
   subscriber_id: string;
   updated_at: string;
@@ -250,6 +263,11 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
     },
     subscriptions: {
       schema: subscriptionSchema,
+      migrationStrategies: {
+        // v0 -> v1 adds the optional plan_name/price fields; existing rows need
+        // no transformation, so upgrade them in place untouched.
+        1: (oldDocument) => oldDocument,
+      },
     },
   });
 
