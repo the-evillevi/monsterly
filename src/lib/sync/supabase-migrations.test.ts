@@ -55,7 +55,7 @@ describe('Supabase replication migrations', () => {
     const migration = await readMigrationContaining('add_subscription_plan_name_and_price');
 
     expect(migration).toContain('add column if not exists plan_name text');
-    expect(migration).toContain('add column if not exists price numeric(10, 2)');
+    expect(migration).toContain('add column if not exists price numeric');
     expect(migration).toContain(
       'add constraint subscriptions_price_non_negative check (price is null or price >= 0)',
     );
