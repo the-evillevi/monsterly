@@ -21,8 +21,9 @@ export type SaveSubscriberInput = {
 const uniquenessAttempts = 5;
 
 // Local uniqueness check with regenerate-and-retry; the global Postgres unique
-// indexes are the multi-device backstop.
-async function generateUnique(
+// indexes are the multi-device backstop, and push-conflict-recovery.ts reuses
+// this to regenerate values they reject.
+export async function generateUnique(
   db: MonsterlyDatabase,
   field: 'slug' | 'check_in_code',
   generate: () => string,

@@ -3,6 +3,7 @@ import { replicateSupabase } from 'rxdb/plugins/replication-supabase';
 
 import type { MonsterlyDatabase } from '@/lib/local-db/monsterly-db';
 
+import { attachPushConflictRecovery } from './push-conflict-recovery';
 import type { SyncReplicationFactory, SyncReplicationState, SyncStatusSnapshot } from './types';
 
 type CreateSupabaseReplicationsOptions = {
@@ -29,8 +30,8 @@ export function createSupabaseReplications({
   db,
   replicationFactory = replicateSupabase as unknown as SyncReplicationFactory,
 }: CreateSupabaseReplicationsOptions) {
-  return collectionSyncConfigs.map(({ collectionName, tableName }) =>
-    replicationFactory({
+  return collectionSyncConfigs.map(({ collectionName, tableName }) => {
+    const replication = replicationFactory({
       client,
       collection: db[collectionName],
       deletedField: '_deleted',
@@ -47,8 +48,24 @@ export function createSupabaseReplications({
       retryTime: 5_000,
       tableName,
       waitForLeadership: false,
-    }),
-  );
+    });
+
+    if (collectionName === 'subscribers') {
+      // Subscriber slugs/PINs are minted client-side under global unique
+      // indexes; recover from cross-device collisions instead of letting the
+      // push retry the same rejected doc forever.
+      const recovery = attachPushConflictRecovery(replication, db);
+      const cancelReplication = replication.cancel.bind(replication);
+
+      replication.cancel = () => {
+        recovery.unsubscribe();
+
+        return cancelReplication();
+      };
+    }
+
+    return replication;
+  });
 }
 
 export function createSyncStatusStore(initialSnapshot?: Partial<SyncStatusSnapshot>) {
