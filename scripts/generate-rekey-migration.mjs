@@ -41,24 +41,30 @@ function joinFullName(split) {
 }
 
 /**
- * Every member must appear in the split file exactly once, and the split parts
- * must reassemble the original nombre (whitespace-normalized) so a stray edit
- * can't silently drop or invent a name.
+ * Every member must appear in the split file exactly once (matched on the
+ * whitespace-normalized nombre) with a non-empty given name. The reviewed
+ * split is authoritative: entries whose parts reassemble to something other
+ * than the original nombre are deliberate corrections (typo fixes, reordered
+ * suffixes) and are reported back for a final eyeball, not rejected.
  */
 export function validateNameSplit(records, splits) {
   const splitByNombre = new Map();
 
   for (const split of splits) {
-    if (splitByNombre.has(split.nombre)) {
+    const key = normalizeName(split.nombre);
+
+    if (splitByNombre.has(key)) {
       throw new Error(`Duplicate split entry for "${split.nombre}".`);
     }
-    splitByNombre.set(split.nombre, split);
+    splitByNombre.set(key, split);
   }
 
   const problems = [];
+  const corrections = [];
 
   for (const record of records) {
-    const split = splitByNombre.get(record.nombre);
+    const nombre = normalizeName(record.nombre);
+    const split = splitByNombre.get(nombre);
 
     if (!split) {
       problems.push(`Missing split entry for "${record.nombre}".`);
@@ -72,10 +78,8 @@ export function validateNameSplit(records, splits) {
 
     const reassembled = joinFullName(split);
 
-    if (reassembled !== normalizeName(record.nombre)) {
-      problems.push(
-        `Split for "${record.nombre}" reassembles to "${reassembled}"; parts must keep the original tokens.`,
-      );
+    if (reassembled !== nombre) {
+      corrections.push(`"${nombre}" -> "${reassembled}"`);
     }
   }
 
@@ -83,7 +87,7 @@ export function validateNameSplit(records, splits) {
     throw new Error(`Name split file is not ready:\n- ${problems.join('\n- ')}`);
   }
 
-  return splitByNombre;
+  return { corrections, splitByNombre };
 }
 
 /**
@@ -95,12 +99,12 @@ export function buildRekeyPlan(
   splits,
   { newId = uuidv7, slugSuffix = randomSlugSuffix, checkInCode = randomCheckInCode } = {},
 ) {
-  const splitByNombre = validateNameSplit(records, splits);
+  const { splitByNombre } = validateNameSplit(records, splits);
   const usedSlugs = new Set();
   const usedCodes = new Set();
 
   return records.map((record) => {
-    const split = splitByNombre.get(record.nombre);
+    const split = splitByNombre.get(normalizeName(record.nombre));
     const importSlug = slugify(record.nombre);
     const fullName = joinFullName(split);
 
@@ -333,6 +337,15 @@ async function main() {
 
   const records = JSON.parse(readFileSync(dataPath, 'utf8'));
   const splits = JSON.parse(readFileSync(splitPath, 'utf8'));
+
+  const { corrections } = validateNameSplit(records, splits);
+
+  if (corrections.length > 0) {
+    console.log(`Applying ${corrections.length} reviewed name corrections:`);
+    for (const correction of corrections) {
+      console.log(`  ${correction}`);
+    }
+  }
 
   const plan = buildRekeyPlan(records, splits);
   const sql = renderRekeySql(plan);

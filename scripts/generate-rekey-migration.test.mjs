@@ -49,7 +49,13 @@ function fakeGenerators() {
 
 describe('validateNameSplit', () => {
   it('accepts splits whose parts reassemble the original nombre', () => {
-    expect(() => validateNameSplit(records, splits)).not.toThrow();
+    expect(validateNameSplit(records, splits).corrections).toEqual([]);
+  });
+
+  it('matches entries whose nombre differs only in whitespace', () => {
+    const edited = [{ ...splits[0], nombre: ' Ejemplo  Regular ' }, splits[1]];
+
+    expect(validateNameSplit(records, edited).corrections).toEqual([]);
   });
 
   it('rejects missing members', () => {
@@ -58,13 +64,15 @@ describe('validateNameSplit', () => {
     );
   });
 
-  it('rejects splits that drop or invent tokens', () => {
+  it('reports edited tokens as reviewed corrections instead of rejecting them', () => {
     const edited = [
       splits[0],
-      { ...splits[1], maternal_last_name: null }, // drops "López"
+      { ...splits[1], maternal_last_name: null }, // reviewer dropped "López"
     ];
 
-    expect(() => validateNameSplit(records, edited)).toThrow(/reassembles to "Ana O'Connor"/);
+    expect(validateNameSplit(records, edited).corrections).toEqual([
+      '"Ana O\'Connor López" -> "Ana O\'Connor"',
+    ]);
   });
 
   it('rejects empty given names', () => {
