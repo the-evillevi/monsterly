@@ -43,6 +43,35 @@ describe('Supabase organization sync', () => {
     expect(calls.every((call) => call.modifiedField === '_modified')).toBe(true);
   });
 
+  it('attaches push conflict recovery to the subscribers replication only', async () => {
+    const db = await getMonsterlyDatabase({ name: 'monsterly-test' });
+    const errorSubscriptions: Record<string, ReturnType<typeof vi.fn>> = {};
+
+    const replications = createSupabaseReplications({
+      activeOrganizationId: 'organization-1',
+      client: createSupabaseClientStub(),
+      db,
+      replicationFactory: (options) => {
+        const unsubscribe = vi.fn();
+        errorSubscriptions[options.tableName] = unsubscribe;
+
+        return {
+          ...createReplicationStateStub(),
+          error$: { subscribe: vi.fn(() => ({ unsubscribe })) },
+        };
+      },
+    });
+
+    // Only subscribers carry the globally unique slug/check_in_code columns,
+    // so only that replication gets the recovery listener — and cancelling
+    // the replication detaches it.
+    replications.forEach((replication) => replication.cancel());
+
+    expect(errorSubscriptions.subscribers).toHaveBeenCalledTimes(1);
+    expect(errorSubscriptions.subscriptions).not.toHaveBeenCalled();
+    expect(errorSubscriptions.renewals).not.toHaveBeenCalled();
+  });
+
   it('adds organization filters to pull queries', async () => {
     const db = await getMonsterlyDatabase({ name: 'monsterly-test' });
     const calls: SyncReplicationFactoryCall[] = [];

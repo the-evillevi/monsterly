@@ -13,7 +13,9 @@ import { type SubscriberGender, subscriberGenders } from '@/lib/local-db/monster
 
 const subscriberFormSchema = z.object({
   gender: z.enum(subscriberGenders),
+  maternal_last_name: z.string().trim(),
   name: z.string().trim().min(1, 'El nombre es obligatorio.'),
+  paternal_last_name: z.string().trim(),
   phone_number: z.union([
     z.literal(''),
     z.string().refine(isValidPhoneNumber, 'Ingresa un teléfono válido de al menos 10 dígitos.'),
@@ -24,7 +26,9 @@ type SubscriberFormSchema = z.infer<typeof subscriberFormSchema>;
 
 export type SubscriberFormValues = {
   gender: SubscriberGender;
+  maternal_last_name?: string;
   name: string;
+  paternal_last_name?: string;
   phone_number?: string;
 };
 
@@ -52,7 +56,9 @@ export function SubscriberForm({
   const form = useForm<SubscriberFormSchema>({
     defaultValues: {
       gender: defaultValues?.gender ?? 'unspecified',
+      maternal_last_name: defaultValues?.maternal_last_name ?? '',
       name: defaultValues?.name ?? '',
+      paternal_last_name: defaultValues?.paternal_last_name ?? '',
       phone_number: defaultValues?.phone_number ?? '',
     },
     resolver: zodResolver(subscriberFormSchema),
@@ -65,7 +71,9 @@ export function SubscriberForm({
     try {
       await onSubmit({
         gender: values.gender,
+        maternal_last_name: values.maternal_last_name || undefined,
         name: values.name,
+        paternal_last_name: values.paternal_last_name || undefined,
         phone_number: values.phone_number || undefined,
       });
     } catch (error) {
@@ -86,6 +94,30 @@ export function SubscriberForm({
             {...form.register('name')}
           />
           <FieldError>{errors.name?.message}</FieldError>
+        </Field>
+        <Field data-invalid={errors.paternal_last_name ? true : undefined}>
+          <FieldLabel htmlFor="subscriber-paternal-last-name">
+            Apellido paterno (opcional)
+          </FieldLabel>
+          <Input
+            aria-invalid={errors.paternal_last_name ? true : undefined}
+            id="subscriber-paternal-last-name"
+            type="text"
+            {...form.register('paternal_last_name')}
+          />
+          <FieldError>{errors.paternal_last_name?.message}</FieldError>
+        </Field>
+        <Field data-invalid={errors.maternal_last_name ? true : undefined}>
+          <FieldLabel htmlFor="subscriber-maternal-last-name">
+            Apellido materno (opcional)
+          </FieldLabel>
+          <Input
+            aria-invalid={errors.maternal_last_name ? true : undefined}
+            id="subscriber-maternal-last-name"
+            type="text"
+            {...form.register('maternal_last_name')}
+          />
+          <FieldError>{errors.maternal_last_name?.message}</FieldError>
         </Field>
         <Field data-invalid={errors.gender ? true : undefined}>
           <FieldLabel htmlFor="subscriber-gender">Género</FieldLabel>

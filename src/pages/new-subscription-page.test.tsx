@@ -18,8 +18,8 @@ async function renderNewSubscriptionPage(subscriberId: string) {
     <DataLayerContext.Provider value={context}>
       <MemoryRouter initialEntries={[`/subscribers/${subscriberId}/subscriptions/new`]}>
         <Routes>
-          <Route path="/subscribers/:id/edit" element={<p>edit-subscriber</p>} />
-          <Route path="/subscribers/:id/subscriptions/new" element={<NewSubscriptionPage />} />
+          <Route path="/subscribers/:slug/edit" element={<p>edit-subscriber</p>} />
+          <Route path="/subscribers/:slug/subscriptions/new" element={<NewSubscriptionPage />} />
         </Routes>
       </MemoryRouter>
     </DataLayerContext.Provider>,

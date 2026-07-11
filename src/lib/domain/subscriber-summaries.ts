@@ -1,4 +1,5 @@
 import { parseDateOnly } from './date-only';
+import { formatFullName } from './subscriber-identity';
 import { subscriptionKindLabels } from './subscription-kind';
 
 export type SubscriptionStatus = 'Al corriente' | 'Por vencer' | 'Vencido';
@@ -9,8 +10,11 @@ export type SubscriptionPlan = 'Gym' | 'CrossFit';
 
 type SubscriberSummarySource = {
   id: string;
+  maternal_last_name?: string | null;
   name: string;
+  paternal_last_name?: string | null;
   phone_number?: string | null;
+  slug?: string | null;
 };
 
 type SubscriptionSummarySource = {
@@ -26,6 +30,7 @@ export type SubscriberSummary = {
   paidUntilLabel: string;
   phoneNumber?: string;
   plans: SubscriptionPlan[];
+  slug?: string;
   status: SubscriberStatus;
 };
 
@@ -48,11 +53,12 @@ export function buildSubscriberSummaries({
 
     return {
       id: subscriber.id,
-      name: subscriber.name,
+      name: formatFullName(subscriber),
       paidUntilDate: latestPaidUntilDate,
       paidUntilLabel: formatPaidUntilLabel(latestPaidUntilDate),
       phoneNumber: subscriber.phone_number ?? undefined,
       plans: getPlanLabels(subscriberSubscriptions),
+      slug: subscriber.slug ?? undefined,
       status: getSubscriberStatus(subscriberSubscriptions, today),
     };
   });

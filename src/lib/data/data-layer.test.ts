@@ -640,6 +640,76 @@ describe('RxDB data layer', () => {
     ]);
   });
 
+  it('creates subscribers with a UUIDv7 id, a slug, and a check-in code', async () => {
+    const context = await createTestContext('organization-1');
+
+    const created = await saveSubscriber(context, {
+      maternal_last_name: 'García',
+      name: 'Dulce',
+      paternal_last_name: 'Palomino',
+    });
+
+    expect(created.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(created.slug).toMatch(/^dulce-palomino-garcia-[a-z2-9]{4}$/);
+    expect(created.check_in_code).toMatch(/^[1-9][0-9]{5}$/);
+    expect(created.paternal_last_name).toBe('Palomino');
+    expect(created.maternal_last_name).toBe('García');
+  });
+
+  it('regenerates the slug on rename but keeps id and check-in code stable', async () => {
+    const context = await createTestContext('organization-1');
+
+    const created = await saveSubscriber(context, { name: 'Ana', paternal_last_name: 'Torres' });
+    const renamed = await saveSubscriber(context, {
+      id: created.id,
+      name: 'Ana',
+      paternal_last_name: 'Robles',
+    });
+
+    expect(renamed.id).toBe(created.id);
+    expect(renamed.check_in_code ?? created.check_in_code).toBe(created.check_in_code);
+    expect(renamed.slug).toMatch(/^ana-robles-[a-z2-9]{4}$/);
+    expect(renamed.slug).not.toBe(created.slug);
+
+    const [stored] = await listSubscribers(context);
+    expect(stored?.check_in_code).toBe(created.check_in_code);
+    expect(stored?.slug).toBe(renamed.slug);
+  });
+
+  it('keeps the slug when saving without a name change', async () => {
+    const context = await createTestContext('organization-1');
+
+    const created = await saveSubscriber(context, { name: 'Ana', paternal_last_name: 'Torres' });
+    const resaved = await saveSubscriber(context, {
+      id: created.id,
+      name: 'Ana',
+      paternal_last_name: 'Torres',
+      phone_number: '+52 55 0000 0001',
+    });
+
+    expect(resaved.slug).toBe(created.slug);
+  });
+
+  it('finds subscribers by slug or id through watchSubscriber', async () => {
+    const context = await createTestContext('organization-1');
+
+    const created = await saveSubscriber(context, { name: 'Ana', paternal_last_name: 'Torres' });
+
+    const bySlug = await waitForEmission(
+      watchSubscriber(context, created.slug ?? ''),
+      (subscriber) => subscriber !== null,
+    );
+    const byId = await waitForEmission(
+      watchSubscriber(context, created.id),
+      (subscriber) => subscriber !== null,
+    );
+
+    expect(bySlug?.id).toBe(created.id);
+    expect(byId?.slug).toBe(created.slug);
+  });
+
   it('rejects phone numbers outside 10 to 15 digits', async () => {
     const context = await createTestContext('organization-1');
 

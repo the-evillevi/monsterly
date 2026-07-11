@@ -69,9 +69,9 @@ describe('SubscriberList', () => {
     );
     expect(screen.getByText('Gym')).toBeInTheDocument();
     expect(screen.getByText('CrossFit')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Editar Mariana Soto' })).toHaveAttribute(
-      'href',
-      '/subscribers/subscriber-1/edit',
+    // The edit link routes by slug, never by the primary key.
+    expect(screen.getByRole('link', { name: 'Editar Mariana Soto' }).getAttribute('href')).toMatch(
+      /^\/subscribers\/mariana-soto-[a-z2-9]{4}\/edit$/,
     );
   });
 

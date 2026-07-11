@@ -1,20 +1,52 @@
 import { isValidPhoneNumber } from '@/lib/domain/phone-number';
-import type { SubscriberDocument } from '@/lib/local-db/monsterly-db';
+import {
+  formatFullName,
+  generateCheckInCode,
+  generateSlug,
+  newEntityId,
+} from '@/lib/domain/subscriber-identity';
+import type { MonsterlyDatabase, SubscriberDocument } from '@/lib/local-db/monsterly-db';
 
 import type { DataModuleContext } from './data-layer-context';
 
 export type SaveSubscriberInput = {
   gender?: SubscriberDocument['gender'];
   id?: string;
+  maternal_last_name?: string;
   name: string;
+  paternal_last_name?: string;
   phone_number?: string;
 };
+
+const uniquenessAttempts = 5;
+
+// Local uniqueness check with regenerate-and-retry; the global Postgres unique
+// indexes are the multi-device backstop, and push-conflict-recovery.ts reuses
+// this to regenerate values they reject.
+export async function generateUnique(
+  db: MonsterlyDatabase,
+  field: 'slug' | 'check_in_code',
+  generate: () => string,
+) {
+  for (let attempt = 0; attempt < uniquenessAttempts; attempt += 1) {
+    const candidate = generate();
+    const taken = await db.subscribers.findOne({ selector: { [field]: candidate } }).exec();
+
+    if (!taken) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Could not generate a unique subscriber ${field}.`);
+}
 
 export async function saveSubscriber(
   { activeOrganizationId, db }: DataModuleContext,
   input: SaveSubscriberInput,
 ) {
   const name = input.name.trim();
+  const paternalLastName = input.paternal_last_name?.trim() || null;
+  const maternalLastName = input.maternal_last_name?.trim() || null;
 
   if (!name) {
     throw new Error('Subscriber name is required.');
@@ -24,25 +56,31 @@ export async function saveSubscriber(
     throw new Error('Subscriber phone number must have 10 to 15 digits.');
   }
 
-  const id = input.id ?? crypto.randomUUID();
   const now = new Date().toISOString();
   const existing = input.id
     ? await db.subscribers
         .findOne({
           selector: {
-            id,
+            id: input.id,
             organization_id: activeOrganizationId,
           },
         })
         .exec()
     : null;
+  const fullName = formatFullName({
+    maternal_last_name: maternalLastName,
+    name,
+    paternal_last_name: paternalLastName,
+  });
   const subscriber = {
     _deleted: false,
     _modified: now,
     gender: input.gender ?? 'unspecified',
-    id,
+    id: input.id ?? newEntityId(),
+    maternal_last_name: maternalLastName,
     name,
     organization_id: activeOrganizationId,
+    paternal_last_name: paternalLastName,
     // null, not undefined: an undefined field in incrementalPatch leaves the
     // stored value untouched, so clearing a phone number would silently no-op.
     phone_number: input.phone_number ?? null,
@@ -50,14 +88,30 @@ export async function saveSubscriber(
   };
 
   if (existing) {
-    await existing.incrementalPatch(subscriber);
+    // A rename regenerates the slug (routing-only, nothing binds to it); the
+    // id and check_in_code stay stable for life. When the name is unchanged
+    // the slug field is left out of the patch entirely: pre-backfill docs
+    // have no slug yet and generating one here would diverge from the value
+    // the server-side backfill already assigned.
+    const nameChanged = formatFullName(existing.toJSON()) !== fullName;
+    const patched = await existing.incrementalPatch(
+      nameChanged
+        ? { ...subscriber, slug: await generateUnique(db, 'slug', () => generateSlug(fullName)) }
+        : subscriber,
+    );
 
-    return { ...existing.toJSON(), ...subscriber };
+    return patched.toJSON();
   }
 
+  const [check_in_code, slug] = await Promise.all([
+    generateUnique(db, 'check_in_code', generateCheckInCode),
+    generateUnique(db, 'slug', () => generateSlug(fullName)),
+  ]);
   const createdSubscriber: SubscriberDocument = {
     ...subscriber,
+    check_in_code,
     created_at: now,
+    slug,
   };
 
   await db.subscribers.insert(createdSubscriber);
