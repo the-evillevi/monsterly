@@ -3,7 +3,7 @@ import {
   formatFullName,
   generateCheckInCode,
   generateSlug,
-  newSubscriberId,
+  newEntityId,
 } from '@/lib/domain/subscriber-identity';
 import type { MonsterlyDatabase, SubscriberDocument } from '@/lib/local-db/monsterly-db';
 
@@ -75,7 +75,7 @@ export async function saveSubscriber(
     _deleted: false,
     _modified: now,
     gender: input.gender ?? 'unspecified',
-    id: existing?.id ?? input.id ?? newSubscriberId(),
+    id: input.id ?? newEntityId(),
     maternal_last_name: maternalLastName,
     name,
     organization_id: activeOrganizationId,
@@ -87,25 +87,30 @@ export async function saveSubscriber(
   };
 
   if (existing) {
-    const previousFullName = formatFullName(existing.toJSON());
     // A rename regenerates the slug (routing-only, nothing binds to it); the
-    // id and check_in_code stay stable for life.
-    const slug =
-      existing.slug && previousFullName === fullName
-        ? existing.slug
-        : await generateUnique(db, 'slug', () => generateSlug(fullName));
-    const updatedSubscriber = { ...subscriber, slug };
+    // id and check_in_code stay stable for life. When the name is unchanged
+    // the slug field is left out of the patch entirely: pre-backfill docs
+    // have no slug yet and generating one here would diverge from the value
+    // the server-side backfill already assigned.
+    const nameChanged = formatFullName(existing.toJSON()) !== fullName;
+    const patched = await existing.incrementalPatch(
+      nameChanged
+        ? { ...subscriber, slug: await generateUnique(db, 'slug', () => generateSlug(fullName)) }
+        : subscriber,
+    );
 
-    await existing.incrementalPatch(updatedSubscriber);
-
-    return { ...existing.toJSON(), ...updatedSubscriber };
+    return patched.toJSON();
   }
 
+  const [check_in_code, slug] = await Promise.all([
+    generateUnique(db, 'check_in_code', generateCheckInCode),
+    generateUnique(db, 'slug', () => generateSlug(fullName)),
+  ]);
   const createdSubscriber: SubscriberDocument = {
     ...subscriber,
-    check_in_code: await generateUnique(db, 'check_in_code', generateCheckInCode),
+    check_in_code,
     created_at: now,
-    slug: await generateUnique(db, 'slug', () => generateSlug(fullName)),
+    slug,
   };
 
   await db.subscribers.insert(createdSubscriber);

@@ -17,37 +17,27 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { webcrypto } from 'node:crypto';
 
 import { v7 as uuidv7 } from 'uuid';
 
-import { slugify } from './import-subscribers.mjs';
+import {
+  normalizeName,
+  randomCheckInCode,
+  randomSlugSuffix,
+  slugify,
+} from './import-subscribers.mjs';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DATA_PATH = resolve(scriptDir, 'data/membresias-2026-07.json');
 const DEFAULT_SPLIT_PATH = resolve(scriptDir, 'data/name-split-2026-07.json');
 const MIGRATIONS_DIR = resolve(scriptDir, '../supabase/migrations');
 
-const SLUG_SUFFIX_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
-
-export function randomSlugSuffix(length = 4) {
-  const bytes = webcrypto.getRandomValues(new Uint8Array(length));
-  return Array.from(bytes, (byte) => SLUG_SUFFIX_ALPHABET[byte % SLUG_SUFFIX_ALPHABET.length]).join(
-    '',
-  );
-}
-
-export function randomCheckInCode() {
-  const digits = webcrypto.getRandomValues(new Uint8Array(6));
-  return Array.from(digits, (byte, index) =>
-    index === 0 ? String((byte % 9) + 1) : String(byte % 10),
-  ).join('');
-}
-
-function normalizeSpaces(value) {
-  return String(value ?? '')
-    .trim()
-    .replace(/\s+/g, ' ');
+/** Mirrors formatFullName in src/lib/domain/subscriber-identity.ts. */
+function joinFullName(split) {
+  return [split.name, split.paternal_last_name, split.maternal_last_name]
+    .map(normalizeName)
+    .filter(Boolean)
+    .join(' ');
 }
 
 /**
@@ -75,17 +65,14 @@ export function validateNameSplit(records, splits) {
       continue;
     }
 
-    if (!normalizeSpaces(split.name)) {
+    if (!normalizeName(split.name)) {
       problems.push(`Empty name in the split for "${record.nombre}".`);
       continue;
     }
 
-    const reassembled = [split.name, split.paternal_last_name, split.maternal_last_name]
-      .map(normalizeSpaces)
-      .filter(Boolean)
-      .join(' ');
+    const reassembled = joinFullName(split);
 
-    if (reassembled !== normalizeSpaces(record.nombre)) {
+    if (reassembled !== normalizeName(record.nombre)) {
       problems.push(
         `Split for "${record.nombre}" reassembles to "${reassembled}"; parts must keep the original tokens.`,
       );
@@ -115,10 +102,7 @@ export function buildRekeyPlan(
   return records.map((record) => {
     const split = splitByNombre.get(record.nombre);
     const importSlug = slugify(record.nombre);
-    const fullName = [split.name, split.paternal_last_name, split.maternal_last_name]
-      .map(normalizeSpaces)
-      .filter(Boolean)
-      .join(' ');
+    const fullName = joinFullName(split);
 
     let slug;
     do {
@@ -134,13 +118,13 @@ export function buildRekeyPlan(
 
     return {
       checkInCode: code,
-      maternalLastName: normalizeSpaces(split.maternal_last_name) || null,
-      name: normalizeSpaces(split.name),
+      maternalLastName: normalizeName(split.maternal_last_name) || null,
+      name: normalizeName(split.name),
       newSubscriberId: newId(),
       newSubscriptionId: newId(),
       oldSubscriberId: `import-${importSlug}`,
       oldSubscriptionId: `import-${importSlug}-sub`,
-      paternalLastName: normalizeSpaces(split.paternal_last_name) || null,
+      paternalLastName: normalizeName(split.paternal_last_name) || null,
       slug,
     };
   });
@@ -210,11 +194,14 @@ insert into rekey_subscriptions (old_id, new_id, new_subscriber_id)
 values
 ${subscriptionValues};
 
--- Abort when the live data no longer matches the mapping.
+-- Abort when the live data no longer matches the mapping, or when a randomly
+-- generated slug/PIN collides with a row already in the table (backfilled or
+-- app-created) — regenerate the migration file and retry in that case.
 do $$
 declare
   missing_subscribers integer;
   missing_subscriptions integer;
+  colliding_identifiers integer;
 begin
   select count(*) into missing_subscribers
   from rekey_subscribers mapping
@@ -228,9 +215,20 @@ begin
     on old_row.id = mapping.old_id and old_row._deleted = false
   where old_row.id is null;
 
+  select count(*) into colliding_identifiers
+  from rekey_subscribers mapping
+  join public.subscribers existing_row
+    on existing_row.slug = mapping.slug
+    or existing_row.check_in_code = mapping.check_in_code;
+
   if missing_subscribers > 0 or missing_subscriptions > 0 then
     raise exception 'Re-key mapping mismatch: % subscribers and % subscriptions not found',
       missing_subscribers, missing_subscriptions;
+  end if;
+
+  if colliding_identifiers > 0 then
+    raise exception 'Re-key would collide with % existing slug/check_in_code values; regenerate the migration file',
+      colliding_identifiers;
   end if;
 end;
 $$;

@@ -10,6 +10,7 @@ import {
 } from '@/components/subscribers/subscriber-form';
 import { useSubscriber } from '@/lib/data/use-subscriber-summaries';
 import { useArchiveSubscriber, useSaveSubscriber } from '@/lib/data/use-subscriber-commands';
+import { subscriberUrlSegment } from '@/lib/domain/subscriber-identity';
 
 export function EditSubscriberPage() {
   const { slug = '' } = useParams();
@@ -72,7 +73,7 @@ export function EditSubscriberPage() {
             submitLabel="Guardar"
           />
           <SubscriptionListSection
-            subscriberSlug={subscriber.slug ?? subscriber.id}
+            subscriberSlug={subscriberUrlSegment(subscriber)}
             subscriptions={subscriber.subscriptions}
           />
         </div>

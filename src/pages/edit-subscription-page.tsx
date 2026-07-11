@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { ArchiveConfirmButton } from '@/components/archive-confirm-button';
 import { PageFrame } from '@/components/page-frame';
@@ -33,6 +33,16 @@ export function EditSubscriptionPage() {
   async function handleArchive() {
     await archive(subscriptionId);
     navigate(`/subscribers/${slug}/edit`);
+  }
+
+  // Old id-based URLs still resolve; send them to the canonical slug route.
+  if (subscriber?.slug && subscriber.slug !== slug) {
+    return (
+      <Navigate
+        replace
+        to={`/subscribers/${subscriber.slug}/subscriptions/${subscriptionId}/edit`}
+      />
+    );
   }
 
   return (

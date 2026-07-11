@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildImportRows,
   cleanPhoneNumber,
+  memberKey,
   normalizeName,
   randomCheckInCode,
   randomSlugSuffix,
@@ -43,6 +44,15 @@ describe('import cleaning helpers', () => {
   it('generates unambiguous slug suffixes and numeric PINs', () => {
     expect(randomSlugSuffix()).toMatch(/^[abcdefghjkmnpqrstuvwxyz23456789]{4}$/);
     expect(randomCheckInCode()).toMatch(/^[1-9][0-9]{5}$/);
+  });
+
+  it('builds accent- and case-insensitive member keys from split names', () => {
+    expect(memberKey({ name: 'Ana Gómez' })).toBe('ana-gomez');
+    expect(memberKey({ name: 'ana gomez' })).toBe('ana-gomez');
+    expect(
+      memberKey({ name: 'Dulce', paternal_last_name: 'Palomino', maternal_last_name: 'García' }),
+    ).toBe('dulce-palomino-garcia');
+    expect(memberKey({ name: 'Dulce Palomino García' })).toBe('dulce-palomino-garcia');
   });
 });
 
@@ -128,18 +138,43 @@ describe('buildImportRows', () => {
     }
   });
 
-  it('skips members that already exist by normalized name', () => {
+  it('skips members that already exist, matching case- and accent-insensitively', () => {
+    const { skipped, subscribers, subscriptions } = buildImportRows(records, org, {
+      existingMembers: new Map([['ejemplo-regular', { id: 'existing-1', hasSubscription: true }]]),
+    });
+
+    expect(skipped).toBe(1);
+    expect(subscribers).toMatchObject([{ name: 'Ejemplo Programación' }]);
+    expect(subscriptions).toHaveLength(1);
+  });
+
+  it('matches re-keyed rows whose DB name is split into surname columns', () => {
+    const dbRow = { name: 'Ejemplo', paternal_last_name: 'Regular', maternal_last_name: null };
     const { skipped, subscribers } = buildImportRows(records, org, {
-      existingNames: new Set(['Ejemplo Regular']),
+      existingMembers: new Map([[memberKey(dbRow), { id: 'rekeyed-1', hasSubscription: true }]]),
     });
 
     expect(skipped).toBe(1);
     expect(subscribers).toMatchObject([{ name: 'Ejemplo Programación' }]);
   });
 
-  it('throws on duplicate names within the file', () => {
+  it('rebuilds only the subscription when a previous run left a member without one', () => {
+    const { skipped, subscribers, subscriptions } = buildImportRows(records, org, {
+      existingMembers: new Map([['ejemplo-regular', { id: 'existing-1', hasSubscription: false }]]),
+    });
+
+    expect(skipped).toBe(1);
+    expect(subscribers).toMatchObject([{ name: 'Ejemplo Programación' }]);
+    expect(subscriptions).toHaveLength(2);
+    expect(subscriptions[0]).toMatchObject({ subscriber_id: 'existing-1', plan_name: 'Regular' });
+  });
+
+  it('throws on duplicate names within the file, even across spellings', () => {
     expect(() => buildImportRows([records[0], { ...records[0] }], org)).toThrow(
       'Duplicate member "Ejemplo Regular"',
     );
+    expect(() =>
+      buildImportRows([records[0], { ...records[0], nombre: 'ejemplo regular' }], org),
+    ).toThrow('Duplicate member "ejemplo regular"');
   });
 });

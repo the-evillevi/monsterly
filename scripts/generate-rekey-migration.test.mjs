@@ -136,5 +136,8 @@ describe('renderRekeySql', () => {
     expect(sql).toContain('update public.renewals');
     expect(sql).toContain('set _deleted = true');
     expect(sql).toContain("id like 'import-%' and _deleted = false");
+    // Randomly minted slugs/PINs are pre-checked against rows already in the
+    // table so a collision aborts with an actionable message.
+    expect(sql).toContain('regenerate the migration file');
   });
 });

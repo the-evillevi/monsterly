@@ -1,4 +1,5 @@
 import { nextPaidUntilDate } from '@/lib/domain/billing-period';
+import { newEntityId } from '@/lib/domain/subscriber-identity';
 import type { RenewalDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
 import { activeRecordSelector } from './active-records';
@@ -124,7 +125,7 @@ export async function renewSubscription(context: DataModuleContext, input: Renew
 
   try {
     await recordRenewal(context, {
-      id: crypto.randomUUID(),
+      id: newEntityId(),
       new_paid_until_date: newPaidUntilDate,
       previous_paid_until_date: subscription.paid_until_date,
       subscription_id: subscription.id,

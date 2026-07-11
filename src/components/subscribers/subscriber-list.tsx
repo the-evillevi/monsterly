@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
+import { subscriberUrlSegment } from '@/lib/domain/subscriber-identity';
 import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
 
 type SubscriberListProps = {
@@ -39,7 +40,7 @@ export function SubscriberList({ filterStatus }: SubscriberListProps) {
               <Button asChild size="sm" variant="ghost">
                 <Link
                   aria-label={`Editar ${subscriber.name}`}
-                  to={`/subscribers/${subscriber.slug ?? subscriber.id}/edit`}
+                  to={`/subscribers/${subscriberUrlSegment(subscriber)}/edit`}
                 >
                   Editar
                 </Link>

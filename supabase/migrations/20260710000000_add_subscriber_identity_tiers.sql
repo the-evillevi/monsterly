@@ -66,50 +66,17 @@ on public.subscribers (check_in_code);
 -- Backfill identifiers for pre-existing rows (demo/seed data). The EVL-103
 -- import-% rows are deliberately skipped: the transient re-key migration
 -- replaces them wholesale with UUIDv7 rows carrying curated slugs and PINs.
-do $$
-declare
-  subscriber record;
-  candidate_slug text;
-  candidate_code text;
-begin
-  for subscriber in
-    select id, name
-    from public.subscribers
-    where slug is null
-      and id not like 'import-%'
-  loop
-    loop
-      candidate_slug := trim(both '-' from regexp_replace(
-        lower(translate(
-          subscriber.name,
-          'áéíóúüñÁÉÍÓÚÜÑ',
-          'aeiouunAEIOUUN'
-        )),
-        '[^a-z0-9]+', '-', 'g'
-      )) || '-' || (
-        select string_agg(
-          substr('abcdefghjkmnpqrstuvwxyz23456789', (random() * 30)::int + 1, 1),
-          ''
-        )
-        from generate_series(1, 4)
-      );
-
-      exit when not exists (select 1 from public.subscribers where slug = candidate_slug);
-    end loop;
-
-    loop
-      candidate_code := ((random() * 8)::int + 1)::text
-        || lpad((random() * 99999)::int::text, 5, '0');
-
-      exit when not exists (
-        select 1 from public.subscribers where check_in_code = candidate_code
-      );
-    end loop;
-
-    update public.subscribers
-    set slug = candidate_slug,
-        check_in_code = candidate_code
-    where id = subscriber.id;
-  end loop;
-end;
-$$;
+-- random() in a set expression runs per row; on the astronomically rare
+-- collision the unique indexes above abort the migration and re-running it
+-- is the retry. The 4-char hex suffix is backfill-only; app-generated slugs
+-- use the unambiguous alphabet instead.
+update public.subscribers
+set
+  slug = trim(both '-' from regexp_replace(
+      lower(translate(name, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')),
+      '[^a-z0-9]+', '-', 'g'
+    )) || '-' || substr(md5(random()::text || id), 1, 4),
+  check_in_code = (floor(random() * 9) + 1)::int::text
+    || lpad(floor(random() * 100000)::int::text, 5, '0')
+where slug is null
+  and id not like 'import-%';

@@ -63,31 +63,65 @@ export function normalizeName(name) {
     .replace(/\s+/g, ' ');
 }
 
+// These generators mirror src/lib/domain/subscriber-identity.ts (the .mjs
+// scripts cannot import TS); keep both in sync.
 export function randomSlugSuffix(length = 4) {
-  const bytes = webcrypto.getRandomValues(new Uint8Array(length));
-  return Array.from(bytes, (byte) => SLUG_SUFFIX_ALPHABET[byte % SLUG_SUFFIX_ALPHABET.length]).join(
-    '',
-  );
+  // Reject bytes past the largest multiple of the alphabet size so every
+  // character is equally likely.
+  const limit = 256 - (256 % SLUG_SUFFIX_ALPHABET.length);
+  let suffix = '';
+
+  while (suffix.length < length) {
+    for (const byte of webcrypto.getRandomValues(new Uint8Array(length))) {
+      if (byte < limit && suffix.length < length) {
+        suffix += SLUG_SUFFIX_ALPHABET[byte % SLUG_SUFFIX_ALPHABET.length];
+      }
+    }
+  }
+
+  return suffix;
 }
 
+// Uniform over [100000, 999999] via rejection sampling — a front-desk PIN
+// must not skew guessable.
 export function randomCheckInCode() {
-  const digits = webcrypto.getRandomValues(new Uint8Array(6));
-  return Array.from(digits, (byte, index) =>
-    index === 0 ? String((byte % 9) + 1) : String(byte % 10),
-  ).join('');
+  const range = 900_000;
+  const limit = Math.floor(0x1_0000_0000 / range) * range;
+  const buffer = new Uint32Array(1);
+  let value;
+
+  do {
+    webcrypto.getRandomValues(buffer);
+    value = buffer[0];
+  } while (value >= limit);
+
+  return String(100_000 + (value % range));
+}
+
+/**
+ * Accent- and case-insensitive identity key used to decide whether a
+ * spreadsheet row and a DB row are the same person. DB rows carry split last
+ * names (post EVL-105), so the key is built from the reassembled full name.
+ */
+export function memberKey({ name, paternal_last_name = null, maternal_last_name = null }) {
+  return slugify(
+    [name, paternal_last_name, maternal_last_name].map(normalizeName).filter(Boolean).join(' '),
+  );
 }
 
 /**
  * Turn cleaned spreadsheet rows into subscriber + subscription records with
  * three-tier identifiers, skipping members that already exist (matched by
- * normalized name). Throws on duplicate names within the file so two people
- * can never silently collapse into one row.
+ * memberKey). Throws on duplicate keys within the file so two spellings of
+ * the same person can never silently become two rows. For skipped members
+ * whose subscriber row exists but has no subscription (a previous partially
+ * failed run), the subscription is rebuilt against the existing id.
  */
 export function buildImportRows(
   records,
   organizationId,
   {
-    existingNames = new Set(),
+    existingMembers = new Map(),
     newId = uuidv7,
     slugSuffix = randomSlugSuffix,
     checkInCode = randomCheckInCode,
@@ -101,35 +135,46 @@ export function buildImportRows(
   for (const record of records) {
     const name = normalizeName(record.nombre);
     const planName = String(record.membresia).trim();
+    const key = memberKey({ name });
 
-    if (seen.has(name)) {
+    if (seen.has(key)) {
       throw new Error(`Duplicate member "${name}"; make the names distinguishable first.`);
     }
-    seen.add(name);
+    seen.add(key);
 
-    if (existingNames.has(name)) {
-      skipped += 1;
-      continue;
-    }
-
-    const subscriberId = newId();
     // Deterministic timestamp so re-generated rows stay byte-stable. Triggers
     // set _modified on the server side.
     const timestamp = `${record.fecha_inicio}T00:00:00Z`;
+    const existing = existingMembers.get(key);
+    let subscriberId;
 
-    subscribers.push({
-      id: subscriberId,
-      organization_id: organizationId,
-      name,
-      slug: `${slugify(name)}-${slugSuffix()}`,
-      check_in_code: checkInCode(),
-      gender: 'unspecified',
-      phone_number: cleanPhoneNumber(record.telefono),
-      created_at: timestamp,
-      updated_at: timestamp,
-      deleted_at: null,
-      _deleted: false,
-    });
+    if (existing) {
+      skipped += 1;
+
+      if (existing.hasSubscription) {
+        continue;
+      }
+
+      // Subscriber landed on a previous run but its subscription insert
+      // failed; rebuild only the missing subscription.
+      subscriberId = existing.id;
+    } else {
+      subscriberId = newId();
+
+      subscribers.push({
+        id: subscriberId,
+        organization_id: organizationId,
+        name,
+        slug: `${slugify(name)}-${slugSuffix()}`,
+        check_in_code: checkInCode(),
+        gender: 'unspecified',
+        phone_number: cleanPhoneNumber(record.telefono),
+        created_at: timestamp,
+        updated_at: timestamp,
+        deleted_at: null,
+        _deleted: false,
+      });
+    }
 
     subscriptions.push({
       id: newId(),
@@ -150,6 +195,26 @@ export function buildImportRows(
   }
 
   return { skipped, subscribers, subscriptions };
+}
+
+/** Fetch every row of a PostgREST query, paging past the 1000-row cap. */
+async function fetchAllRows(buildQuery) {
+  const pageSize = 1000;
+  const rows = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+
+    if (error) {
+      throw new Error(`Row fetch failed: ${error.message}`);
+    }
+
+    rows.push(...data);
+
+    if (data.length < pageSize) {
+      return rows;
+    }
+  }
 }
 
 async function main() {
@@ -173,18 +238,28 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const existingResult = await client
-    .from('subscribers')
-    .select('name')
-    .eq('organization_id', organizationId)
-    .eq('_deleted', false);
-  if (existingResult.error) {
-    throw new Error(`Subscriber lookup failed: ${existingResult.error.message}`);
-  }
+  const [existingSubscribers, existingSubscriptions] = await Promise.all([
+    fetchAllRows(() =>
+      client
+        .from('subscribers')
+        .select('id, name, paternal_last_name, maternal_last_name')
+        .eq('organization_id', organizationId)
+        .eq('_deleted', false),
+    ),
+    fetchAllRows(() =>
+      client.from('subscriptions').select('subscriber_id').eq('organization_id', organizationId),
+    ),
+  ]);
 
-  const existingNames = new Set(existingResult.data.map((row) => normalizeName(row.name)));
+  const subscribedIds = new Set(existingSubscriptions.map((row) => row.subscriber_id));
+  const existingMembers = new Map(
+    existingSubscribers.map((row) => [
+      memberKey(row),
+      { id: row.id, hasSubscription: subscribedIds.has(row.id) },
+    ]),
+  );
   const { skipped, subscribers, subscriptions } = buildImportRows(records, organizationId, {
-    existingNames,
+    existingMembers,
   });
 
   if (subscribers.length > 0) {
@@ -192,7 +267,11 @@ async function main() {
     if (subscriberResult.error) {
       throw new Error(`Subscriber insert failed: ${subscriberResult.error.message}`);
     }
+  }
 
+  // Can be non-empty even with zero new subscribers: it also rebuilds
+  // subscriptions lost to a partially failed previous run.
+  if (subscriptions.length > 0) {
     const subscriptionResult = await client.from('subscriptions').insert(subscriptions);
     if (subscriptionResult.error) {
       throw new Error(`Subscription insert failed: ${subscriptionResult.error.message}`);

@@ -1,26 +1,34 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  checkInCodePattern,
   formatFullName,
   generateCheckInCode,
   generateSlug,
-  newSubscriberId,
+  newEntityId,
   slugify,
+  subscriberUrlSegment,
 } from './subscriber-identity';
 
-describe('newSubscriberId', () => {
+describe('newEntityId', () => {
   it('produces UUIDv7 strings', () => {
-    expect(newSubscriberId()).toMatch(
+    expect(newEntityId()).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
   });
 
   it('sorts chronologically', () => {
-    const first = newSubscriberId();
-    const second = newSubscriberId();
+    const first = newEntityId();
+    const second = newEntityId();
 
     expect(first < second).toBe(true);
+  });
+});
+
+describe('subscriberUrlSegment', () => {
+  it('prefers the slug and falls back to the id', () => {
+    expect(subscriberUrlSegment({ id: 'uuid-1', slug: 'ana-torres-x2k4' })).toBe('ana-torres-x2k4');
+    expect(subscriberUrlSegment({ id: 'uuid-1', slug: null })).toBe('uuid-1');
+    expect(subscriberUrlSegment({ id: 'uuid-1' })).toBe('uuid-1');
   });
 });
 
@@ -48,10 +56,7 @@ describe('generateSlug', () => {
 describe('generateCheckInCode', () => {
   it('produces 6-digit PINs without a leading zero', () => {
     for (let i = 0; i < 50; i += 1) {
-      const code = generateCheckInCode();
-
-      expect(code).toMatch(/^[1-9][0-9]{5}$/);
-      expect(code).toMatch(checkInCodePattern);
+      expect(generateCheckInCode()).toMatch(/^[1-9][0-9]{5}$/);
     }
   });
 });
