@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageFrame } from '@/components/page-frame';
 import { SubscriberList } from '@/components/subscribers/subscriber-list';
 import { SyncStatus } from '@/components/sync-status';
+import { UpdatePrompt } from '@/components/update-prompt';
 import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
 import { NewSubscriberPage } from '@/pages/new-subscriber-page';
 import { EditSubscriptionPage } from '@/pages/edit-subscription-page';
@@ -158,6 +159,8 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
+
+      <UpdatePrompt />
     </div>
   );
 }
