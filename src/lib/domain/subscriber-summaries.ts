@@ -1,4 +1,5 @@
 import { parseDateOnly } from './date-only';
+import { planFacilityLabels } from './plan-facilities';
 import { formatFullName } from './subscriber-identity';
 import { subscriptionKindLabels } from './subscription-kind';
 
@@ -149,11 +150,12 @@ function getPlanLabels(
     const plan = subscription.plan_id ? plansById.get(subscription.plan_id) : undefined;
 
     if (plan) {
-      if (plan.facility_access.includes('dragonz')) {
-        labels.add(subscriptionKindLabels.gym);
-      }
-      if (plan.facility_access.includes('monsters')) {
-        labels.add(subscriptionKindLabels.crossfit);
+      for (const facility of plan.facility_access) {
+        const label = planFacilityLabels[facility as keyof typeof planFacilityLabels];
+
+        if (label) {
+          labels.add(label);
+        }
       }
     } else {
       labels.add(subscriptionKindLabels[subscription.kind]);

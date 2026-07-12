@@ -10,7 +10,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field
 import { Select } from '@/components/ui/select';
 import { addBillingPeriod } from '@/lib/domain/billing-period';
 import { todayDateOnly } from '@/lib/domain/date-only';
-import { subscriptionKindLabels } from '@/lib/domain/subscription-kind';
+import { planFacilityLabels } from '@/lib/domain/plan-facilities';
 import type { PlanDocument } from '@/lib/local-db/monsterly-db';
 
 const planSubscriptionFormSchema = z
@@ -45,13 +45,8 @@ type PlanSubscriptionFormProps = {
   submitLabel: string;
 };
 
-const facilityLabels = {
-  dragonz: subscriptionKindLabels.gym,
-  monsters: subscriptionKindLabels.crossfit,
-} as const;
-
 function describePlanAccess(plan: PlanDocument) {
-  const access = plan.facility_access.map((facility) => facilityLabels[facility]).join(' + ');
+  const access = plan.facility_access.map((facility) => planFacilityLabels[facility]).join(' + ');
   const limit = plan.weekly_visit_limit ? ` · ${plan.weekly_visit_limit} visitas por semana` : '';
 
   return `Acceso: ${access}${limit}`;

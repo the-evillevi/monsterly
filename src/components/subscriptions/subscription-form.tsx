@@ -61,6 +61,9 @@ type SubscriptionFormProps = {
   defaultValues?: Partial<SubscriptionFormValues>;
   footer?: ReactNode;
   onSubmit: (values: SubscriptionFormValues) => Promise<void>;
+  // Hidden for plan-based subscriptions: their kind derives from the plan's
+  // facilities and editing it here would contradict the catalog.
+  showKind?: boolean;
   submitLabel: string;
 };
 
@@ -69,6 +72,7 @@ export function SubscriptionForm({
   defaultValues,
   footer,
   onSubmit,
+  showKind = true,
   submitLabel,
 }: SubscriptionFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -120,17 +124,19 @@ export function SubscriptionForm({
   return (
     <form className="w-full max-w-sm" noValidate onSubmit={form.handleSubmit(handleSubmit)}>
       <FieldGroup>
-        <Field data-invalid={errors.kind ? true : undefined}>
-          <FieldLabel htmlFor="subscription-kind">Tipo</FieldLabel>
-          <Select id="subscription-kind" {...form.register('kind')}>
-            {subscriptionKinds.map((kind) => (
-              <option key={kind} value={kind}>
-                {subscriptionKindLabels[kind]}
-              </option>
-            ))}
-          </Select>
-          <FieldError>{errors.kind?.message}</FieldError>
-        </Field>
+        {showKind ? (
+          <Field data-invalid={errors.kind ? true : undefined}>
+            <FieldLabel htmlFor="subscription-kind">Tipo</FieldLabel>
+            <Select id="subscription-kind" {...form.register('kind')}>
+              {subscriptionKinds.map((kind) => (
+                <option key={kind} value={kind}>
+                  {subscriptionKindLabels[kind]}
+                </option>
+              ))}
+            </Select>
+            <FieldError>{errors.kind?.message}</FieldError>
+          </Field>
+        ) : null}
         <Field data-invalid={errors.billing_period ? true : undefined}>
           <FieldLabel htmlFor="subscription-billing-period">Periodo</FieldLabel>
           <BillingPeriodSelect

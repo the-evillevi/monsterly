@@ -1,4 +1,5 @@
 import { nextPaidUntilDate } from '@/lib/domain/billing-period';
+import { planKind } from '@/lib/domain/plan-facilities';
 import { newEntityId } from '@/lib/domain/subscriber-identity';
 import type { RenewalDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
@@ -68,13 +69,7 @@ export async function saveSubscription(
     throw new Error('Plan must belong to the active organization.');
   }
 
-  const kind = plan
-    ? // Deprecated column, still populated: Monsters access reads as
-      // crossfit; facility truth lives on the plan.
-      plan.facility_access.includes('monsters')
-      ? 'crossfit'
-      : 'gym'
-    : input.kind;
+  const kind = plan ? planKind(plan.facility_access) : input.kind;
 
   if (!kind) {
     throw new Error('Subscription needs a plan or a kind.');
