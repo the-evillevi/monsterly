@@ -7,6 +7,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { webManifest } from './src/pwa/web-manifest';
 
 export default defineConfig({
+  // Millisecond build timestamp: lets tabs compare who runs the newer build.
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(String(Date.now())),
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -15,7 +19,9 @@ export default defineConfig({
         enabled: false,
       },
       manifest: webManifest,
-      registerType: 'autoUpdate',
+      // prompt, not autoUpdate: the operator chooses when to apply an update
+      // ("Nueva versión disponible") instead of the app reloading mid-task.
+      registerType: 'prompt',
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
