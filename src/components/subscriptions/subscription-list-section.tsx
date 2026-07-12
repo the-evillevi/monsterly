@@ -43,9 +43,12 @@ export function SubscriptionListSection({
             <li key={subscription.id}>
               <Card className="grid gap-3 p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">{subscriptionKindLabels[subscription.kind]}</Badge>
+                  <Badge variant="secondary">
+                    {subscription.plan_name ?? subscriptionKindLabels[subscription.kind]}
+                  </Badge>
                   <span className="text-sm text-muted-foreground">
                     {formatPeriodLabel(subscription)}
+                    {subscription.price != null ? ` · $${subscription.price}` : ''}
                   </span>
                 </div>
                 <dl className="grid gap-1 text-sm">

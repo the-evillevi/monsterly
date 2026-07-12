@@ -45,6 +45,51 @@ export const billingPeriods = [
 
 export type BillingPeriod = (typeof billingPeriods)[number];
 
+// The two gyms of the organization: Dragonz (weightlifting) and Monsters
+// (CrossFit). A plan grants access to a set of facilities.
+export const planFacilities = ['dragonz', 'monsters'] as const;
+
+export type PlanFacility = (typeof planFacilities)[number];
+
+export const planSchemaLiteral = {
+  title: 'plan schema',
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    organization_id: { type: 'string', maxLength: 100 },
+    name: { type: 'string', maxLength: 200 },
+    price: { type: 'number', minimum: 0 },
+    facility_access: {
+      type: 'array',
+      items: { type: 'string', enum: planFacilities },
+      maxItems: 2,
+    },
+    weekly_visit_limit: { type: ['integer', 'null'], minimum: 1 },
+    active: { type: 'boolean' },
+    created_at: timestampSchema,
+    updated_at: timestampSchema,
+    deleted_at: optionalTimestampSchema,
+    _deleted: { type: 'boolean' },
+    _modified: timestampSchema,
+  },
+  required: [
+    'id',
+    'organization_id',
+    'name',
+    'price',
+    'facility_access',
+    'active',
+    'created_at',
+    'updated_at',
+    '_deleted',
+    '_modified',
+  ],
+  indexes: [['organization_id', 'name']],
+} as const;
+
 export const subscriberSchemaLiteral = {
   title: 'subscriber schema',
   version: 1,
@@ -87,7 +132,7 @@ export const subscriberSchemaLiteral = {
 
 export const subscriptionSchemaLiteral = {
   title: 'subscription schema',
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   additionalProperties: false,
@@ -95,6 +140,10 @@ export const subscriptionSchemaLiteral = {
     id: { type: 'string', maxLength: 100 },
     organization_id: { type: 'string', maxLength: 100 },
     subscriber_id: { type: 'string', maxLength: 100 },
+    // Catalog link; plan_name/price below stay as the point-of-sale snapshot.
+    plan_id: { type: ['string', 'null'], maxLength: 100 },
+    // Deprecated: facility access now lives on the plan. Kept populated for
+    // legacy rows and readers until fully migrated.
     kind: { type: 'string', enum: subscriptionKinds },
     billing_period: {
       type: 'string',
@@ -195,11 +244,27 @@ export type SubscriptionDocument = {
   kind: SubscriptionKind;
   organization_id: string;
   paid_until_date: string;
+  plan_id?: string | null;
   plan_name?: string | null;
   price?: number | null;
   start_date: string;
   subscriber_id: string;
   updated_at: string;
+};
+
+export type PlanDocument = {
+  _deleted: boolean;
+  _modified: string;
+  active: boolean;
+  created_at: string;
+  deleted_at?: string | null;
+  facility_access: readonly PlanFacility[];
+  id: string;
+  name: string;
+  organization_id: string;
+  price: number;
+  updated_at: string;
+  weekly_visit_limit?: number | null;
 };
 
 export type RenewalDocument = {
@@ -218,8 +283,10 @@ export type RenewalDocument = {
 export const subscriberSchema: RxJsonSchema<SubscriberDocument> = subscriberSchemaLiteral;
 export const subscriptionSchema: RxJsonSchema<SubscriptionDocument> = subscriptionSchemaLiteral;
 export const renewalSchema: RxJsonSchema<RenewalDocument> = renewalSchemaLiteral;
+export const planSchema: RxJsonSchema<PlanDocument> = planSchemaLiteral;
 
 export type MonsterlyCollections = {
+  plans: RxCollection<PlanDocument>;
   renewals: RxCollection<RenewalDocument>;
   subscribers: RxCollection<SubscriberDocument>;
   subscriptions: RxCollection<SubscriptionDocument>;
@@ -265,6 +332,9 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
   });
 
   await database.addCollections({
+    plans: {
+      schema: planSchema,
+    },
     renewals: {
       schema: renewalSchema,
     },
@@ -283,6 +353,9 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
         // v0 -> v1 adds the optional plan_name/price fields; existing rows need
         // no transformation, so upgrade them in place untouched.
         1: (oldDocument) => oldDocument,
+        // v1 -> v2 adds the optional plan_id link; the server-side remap
+        // delivers values via pull replication, so docs pass through as-is.
+        2: (oldDocument) => oldDocument,
       },
     },
   });

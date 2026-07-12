@@ -3,10 +3,67 @@ import { listSubscribers } from './subscribers.queries';
 import { saveSubscriber } from './subscribers.commands';
 import { saveSubscription } from './subscriptions.commands';
 
+const demoPlans = [
+  {
+    facility_access: ['dragonz' as const],
+    id: 'demo-plan-gimnasio',
+    name: 'Gimnasio',
+    price: 300,
+    weekly_visit_limit: null,
+  },
+  {
+    facility_access: ['monsters' as const],
+    id: 'demo-plan-crossfit-3-dias',
+    name: 'CrossFit (3 días)',
+    price: 350,
+    weekly_visit_limit: 3,
+  },
+  {
+    facility_access: ['monsters' as const],
+    id: 'demo-plan-crossfit-regular',
+    name: 'CrossFit (Regular)',
+    price: 450,
+    weekly_visit_limit: null,
+  },
+  {
+    facility_access: ['dragonz' as const, 'monsters' as const],
+    id: 'demo-plan-combo',
+    name: 'Combo',
+    price: 600,
+    weekly_visit_limit: null,
+  },
+];
+
+async function seedDemoPlans(context: DataModuleContext) {
+  const existingPlans = await context.db.plans.find().exec();
+
+  if (existingPlans.length > 0) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  await Promise.all(
+    demoPlans.map((plan) =>
+      context.db.plans.insert({
+        ...plan,
+        _deleted: false,
+        _modified: now,
+        active: true,
+        created_at: now,
+        organization_id: context.activeOrganizationId,
+        updated_at: now,
+      }),
+    ),
+  );
+}
+
 export async function seedDemoSubscribers(context: DataModuleContext) {
   if (context.activeOrganizationId !== demoOrganizationId) {
     return;
   }
+
+  await seedDemoPlans(context);
 
   const existingSubscribers = await listSubscribers(context);
 

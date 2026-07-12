@@ -20,7 +20,13 @@ type SubscriberSummarySource = {
 type SubscriptionSummarySource = {
   kind: 'gym' | 'crossfit';
   paid_until_date: string;
+  plan_id?: string | null;
   subscriber_id: string;
+};
+
+type PlanSummarySource = {
+  facility_access: readonly string[];
+  id: string;
 };
 
 export type SubscriberSummary = {
@@ -37,14 +43,18 @@ export type SubscriberSummary = {
 const warningWindowDays = 3;
 
 export function buildSubscriberSummaries({
+  plans = [],
   subscribers,
   subscriptions,
   today = new Date(),
 }: {
+  plans?: PlanSummarySource[];
   subscribers: SubscriberSummarySource[];
   subscriptions: SubscriptionSummarySource[];
   today?: Date;
 }): SubscriberSummary[] {
+  const plansById = new Map(plans.map((plan) => [plan.id, plan]));
+
   return subscribers.map((subscriber) => {
     const subscriberSubscriptions = subscriptions.filter(
       (subscription) => subscription.subscriber_id === subscriber.id,
@@ -57,7 +67,7 @@ export function buildSubscriberSummaries({
       paidUntilDate: latestPaidUntilDate,
       paidUntilLabel: formatPaidUntilLabel(latestPaidUntilDate),
       phoneNumber: subscriber.phone_number ?? undefined,
-      plans: getPlanLabels(subscriberSubscriptions),
+      plans: getPlanLabels(subscriberSubscriptions, plansById),
       slug: subscriber.slug ?? undefined,
       status: getSubscriberStatus(subscriberSubscriptions, today),
     };
@@ -127,17 +137,33 @@ function formatPaidUntilLabel(paidUntilDate?: string) {
   }).format(date);
 }
 
-function getPlanLabels(subscriptions: SubscriptionSummarySource[]): SubscriptionPlan[] {
-  const kinds = new Set(subscriptions.map((subscription) => subscription.kind));
-  const plans: SubscriptionPlan[] = [];
+// Facility badges: a plan's facility set is the truth (a Combo member shows
+// both gyms); rows without a catalog plan fall back to the deprecated kind.
+function getPlanLabels(
+  subscriptions: SubscriptionSummarySource[],
+  plansById: Map<string, PlanSummarySource>,
+): SubscriptionPlan[] {
+  const labels = new Set<SubscriptionPlan>();
 
-  if (kinds.has('gym')) {
-    plans.push(subscriptionKindLabels.gym);
+  for (const subscription of subscriptions) {
+    const plan = subscription.plan_id ? plansById.get(subscription.plan_id) : undefined;
+
+    if (plan) {
+      if (plan.facility_access.includes('dragonz')) {
+        labels.add(subscriptionKindLabels.gym);
+      }
+      if (plan.facility_access.includes('monsters')) {
+        labels.add(subscriptionKindLabels.crossfit);
+      }
+    } else {
+      labels.add(subscriptionKindLabels[subscription.kind]);
+    }
   }
 
-  if (kinds.has('crossfit')) {
-    plans.push(subscriptionKindLabels.crossfit);
-  }
+  const orderedLabels: SubscriptionPlan[] = [
+    subscriptionKindLabels.gym,
+    subscriptionKindLabels.crossfit,
+  ];
 
-  return plans;
+  return orderedLabels.filter((label) => labels.has(label));
 }
