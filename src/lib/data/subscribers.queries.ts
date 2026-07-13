@@ -63,6 +63,23 @@ export function watchSubscriber(
   );
 }
 
+/** Front-desk lookup: resolves a scanned/typed check-in code to the member. */
+export async function findSubscriberByCheckInCode(
+  { activeOrganizationId, db }: DataModuleContext,
+  checkInCode: string,
+): Promise<SubscriberDocument | null> {
+  const document = await db.subscribers
+    .findOne({
+      selector: {
+        ...activeRecordSelector(activeOrganizationId),
+        check_in_code: checkInCode,
+      },
+    })
+    .exec();
+
+  return document ? document.toJSON() : null;
+}
+
 export async function listSubscribers({
   activeOrganizationId,
   db,

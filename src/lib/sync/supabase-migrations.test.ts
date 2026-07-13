@@ -69,4 +69,16 @@ describe('Supabase replication migrations', () => {
     expect(migration).toContain('new._modified = now()');
     expect(migration).not.toMatch(/_deleted\s*=.*deleted_at/);
   });
+
+  it('wires check_ins into sync metadata, RLS, and the realtime publication', async () => {
+    const migration = await readMigrationContaining('add_check_ins');
+
+    expect(migration).toContain('create table public.check_ins');
+    expect(migration).toContain('execute function public.set_rxdb_sync_metadata()');
+    expect(migration).toContain('references public.subscribers (id, organization_id)');
+    expect(migration).toContain('alter table public.check_ins enable row level security');
+    expect(migration).toMatch(/alter publication supabase_realtime\s+add table public\.check_ins/);
+    // No derived subscription status may be persisted on scan rows.
+    expect(migration).not.toMatch(/status\s+text/i);
+  });
 });
