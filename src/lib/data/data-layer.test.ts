@@ -922,10 +922,16 @@ describe('RxDB data layer', () => {
 
   it('keeps App UI code behind feature hooks instead of importing RxDB directly', async () => {
     const appSource = await readFile(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
+    const dashboardSource = await readFile(
+      resolve(process.cwd(), 'src/pages/dashboard-page.tsx'),
+      'utf8',
+    );
 
     expect(appSource).not.toContain('local-db');
     expect(appSource).not.toContain('rxdb');
-    expect(appSource).toContain('useSubscriberSummaries');
+    expect(dashboardSource).not.toContain('local-db');
+    expect(dashboardSource).not.toContain('rxdb');
+    expect(dashboardSource).toContain('useSubscriberSummaries');
   });
 });
 
