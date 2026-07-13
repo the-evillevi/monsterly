@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageFrame } from '@/components/page-frame';
 import { SubscriberList } from '@/components/subscribers/subscriber-list';
 import { SyncStatus } from '@/components/sync-status';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { UpdatePrompt } from '@/components/update-prompt';
 import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
 import { NewSubscriberPage } from '@/pages/new-subscriber-page';
@@ -121,7 +122,10 @@ function App() {
           >
             Monsterly
           </NavLink>
-          <SyncStatus />
+          <div className="flex items-center justify-between gap-2">
+            <SyncStatus />
+            <ThemeToggle />
+          </div>
           <nav className="flex gap-2 overflow-x-auto pb-1 md:grid md:overflow-visible md:pb-0">
             {navItems.map((item) => (
               <NavLink

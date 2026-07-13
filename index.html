@@ -8,6 +8,19 @@
       content="Monsterly helps gyms and CrossFit boxes track subscriber payment status."
     />
     <meta name="theme-color" content="#1f5f26" />
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('monsterly-theme');
+          var dark =
+            theme === 'dark' ||
+            (theme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+        } catch {
+          /* first paint falls back to light */
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>Monsterly</title>
