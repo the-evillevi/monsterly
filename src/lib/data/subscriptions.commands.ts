@@ -1,7 +1,11 @@
 import { nextPaidUntilDate } from '@/lib/domain/billing-period';
 import { planKind } from '@/lib/domain/plan-facilities';
 import { newEntityId } from '@/lib/domain/subscriber-identity';
-import type { RenewalDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
+import type {
+  PaymentMethod,
+  RenewalDocument,
+  SubscriptionDocument,
+} from '@/lib/local-db/monsterly-db';
 
 import { activeRecordSelector } from './active-records';
 import type { DataModuleContext } from './data-layer-context';
@@ -22,6 +26,7 @@ export type SaveSubscriptionInput = {
 export type SaveRenewalInput = {
   id: string;
   new_paid_until_date: string;
+  payment_method?: PaymentMethod | null;
   previous_paid_until_date: string;
   subscription_id: string;
 };
@@ -114,6 +119,7 @@ export async function saveSubscription(
 export type RenewSubscriptionInput = {
   billing_period: SubscriptionDocument['billing_period'];
   custom_days?: number | null;
+  payment_method?: PaymentMethod | null;
   subscription_id: string;
   today?: Date;
 };
@@ -157,6 +163,7 @@ export async function renewSubscription(context: DataModuleContext, input: Renew
     await recordRenewal(context, {
       id: newEntityId(),
       new_paid_until_date: newPaidUntilDate,
+      payment_method: input.payment_method,
       previous_paid_until_date: subscription.paid_until_date,
       subscription_id: subscription.id,
     });
@@ -223,6 +230,7 @@ export async function recordRenewal(
     id: input.id,
     new_paid_until_date: input.new_paid_until_date,
     organization_id: activeOrganizationId,
+    payment_method: input.payment_method ?? null,
     previous_paid_until_date: input.previous_paid_until_date,
     subscription_id: input.subscription_id,
     updated_at: now,
