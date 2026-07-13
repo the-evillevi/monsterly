@@ -31,8 +31,9 @@ describe('Supabase organization sync', () => {
       },
     });
 
-    expect(replications).toHaveLength(3);
+    expect(replications).toHaveLength(4);
     expect(calls.map((call) => call.tableName)).toEqual([
+      'plans',
       'subscribers',
       'subscriptions',
       'renewals',
@@ -68,6 +69,7 @@ describe('Supabase organization sync', () => {
     replications.forEach((replication) => replication.cancel());
 
     expect(errorSubscriptions.subscribers).toHaveBeenCalledTimes(1);
+    expect(errorSubscriptions.plans).not.toHaveBeenCalled();
     expect(errorSubscriptions.subscriptions).not.toHaveBeenCalled();
     expect(errorSubscriptions.renewals).not.toHaveBeenCalled();
   });

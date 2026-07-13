@@ -1,4 +1,5 @@
 import { nextPaidUntilDate } from '@/lib/domain/billing-period';
+import { planKind } from '@/lib/domain/plan-facilities';
 import { newEntityId } from '@/lib/domain/subscriber-identity';
 import type { RenewalDocument, SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
@@ -9,8 +10,11 @@ export type SaveSubscriptionInput = {
   billing_period: SubscriptionDocument['billing_period'];
   custom_days?: number | null;
   id: string;
-  kind: SubscriptionDocument['kind'];
+  // Either a catalog plan (which snapshots name/price and derives the
+  // deprecated kind) or an explicit kind for legacy rows.
+  kind?: SubscriptionDocument['kind'];
   paid_until_date: string;
+  plan_id?: string;
   start_date: string;
   subscriber_id: string;
 };
@@ -49,6 +53,28 @@ export async function saveSubscription(
   if (!subscriber) {
     throw new Error('Subscriber must belong to the active organization.');
   }
+
+  const plan = input.plan_id
+    ? await db.plans
+        .findOne({
+          selector: {
+            ...activeRecordSelector(activeOrganizationId),
+            id: input.plan_id,
+          },
+        })
+        .exec()
+    : null;
+
+  if (input.plan_id && !plan) {
+    throw new Error('Plan must belong to the active organization.');
+  }
+
+  const kind = plan ? planKind(plan.facility_access) : input.kind;
+
+  if (!kind) {
+    throw new Error('Subscription needs a plan or a kind.');
+  }
+
   const subscription = {
     _deleted: false,
     _modified: now,
@@ -57,9 +83,13 @@ export async function saveSubscription(
     // when the billing period stops being custom.
     custom_days: input.custom_days ?? null,
     id: input.id,
-    kind: input.kind,
+    kind,
     organization_id: activeOrganizationId,
     paid_until_date: input.paid_until_date,
+    // Snapshot the plan at point of sale; catalog price changes must never
+    // rewrite what this member actually pays. Omitted (undefined) when no
+    // plan is given so edits of legacy rows leave stored values untouched.
+    ...(plan ? { plan_id: plan.id, plan_name: plan.name, price: plan.price } : {}),
     start_date: input.start_date,
     subscriber_id: input.subscriber_id,
     updated_at: now,

@@ -1,5 +1,7 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 
+import { combineLatest } from 'rxjs';
+
 import {
   buildSubscriberSummaries,
   type SubscriberSummary,
@@ -7,6 +9,7 @@ import {
 } from '@/lib/domain/subscriber-summaries';
 
 import { DataLayerContext } from './data-layer-context';
+import { watchPlans } from './plans.queries';
 import { watchSubscriber, watchSubscribers } from './subscribers.queries';
 import type { SubscriberWithSubscriptions } from './subscriber-types';
 
@@ -22,8 +25,13 @@ export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
 
     setIsLoading(true);
 
-    const subscription = watchSubscribers({ activeOrganizationId, db }).subscribe((subscribers) => {
+    const subscription = combineLatest([
+      watchSubscribers({ activeOrganizationId, db }),
+      // Plans feed the facility badges (a Combo member shows both gyms).
+      watchPlans({ activeOrganizationId, db }),
+    ]).subscribe(([subscribers, plans]) => {
       const nextSummaries = buildSubscriberSummaries({
+        plans,
         subscribers,
         subscriptions: subscribers.flatMap((subscriber) => subscriber.subscriptions),
       });

@@ -70,6 +70,7 @@ export function EditSubscriptionPage() {
               paid_until_date: subscription.paid_until_date,
               start_date: subscription.start_date,
             }}
+            showKind={!subscription.plan_id}
             footer={
               <ArchiveConfirmButton
                 confirmPrompt="¿Archivar esta suscripción?"

@@ -14,11 +14,12 @@ type CreateSupabaseReplicationsOptions = {
 };
 
 type CollectionSyncConfig = {
-  collectionName: 'renewals' | 'subscribers' | 'subscriptions';
-  tableName: 'renewals' | 'subscribers' | 'subscriptions';
+  collectionName: 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
+  tableName: 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
 };
 
 const collectionSyncConfigs: CollectionSyncConfig[] = [
+  { collectionName: 'plans', tableName: 'plans' },
   { collectionName: 'subscribers', tableName: 'subscribers' },
   { collectionName: 'subscriptions', tableName: 'subscriptions' },
   { collectionName: 'renewals', tableName: 'renewals' },

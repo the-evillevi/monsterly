@@ -434,6 +434,106 @@ describe('RxDB data layer', () => {
     expect(subscription?.custom_days).toBeNull();
   });
 
+  it('snapshots the catalog plan onto new subscriptions and keeps it through renewals', async () => {
+    const context = await createTestContext('organization-1');
+    const now = new Date().toISOString();
+    await context.db.plans.insert({
+      _deleted: false,
+      _modified: now,
+      active: true,
+      created_at: now,
+      facility_access: ['dragonz', 'monsters'],
+      id: 'plan-combo',
+      name: 'Combo',
+      organization_id: 'organization-1',
+      price: 600,
+      updated_at: now,
+      weekly_visit_limit: null,
+    });
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    const created = await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      paid_until_date: '2026-08-04',
+      plan_id: 'plan-combo',
+      start_date: '2026-07-04',
+      subscriber_id: 'subscriber-1',
+    });
+
+    // Monsters access reads as crossfit in the deprecated kind column.
+    expect(created).toMatchObject({
+      kind: 'crossfit',
+      plan_id: 'plan-combo',
+      plan_name: 'Combo',
+      price: 600,
+    });
+
+    await renewSubscription(context, {
+      billing_period: 'monthly',
+      subscription_id: 'subscription-1',
+      today: new Date(2026, 6, 4),
+    });
+
+    // The renewal path does not resend plan fields; the snapshot survives.
+    await expect(listSubscriptions(context)).resolves.toMatchObject([
+      {
+        paid_until_date: '2026-09-04',
+        plan_id: 'plan-combo',
+        plan_name: 'Combo',
+        price: 600,
+      },
+    ]);
+  });
+
+  it('rejects plans outside the active organization', async () => {
+    const organizationOne = await createTestContext('organization-1');
+    const organizationTwo = await createTestContext('organization-2');
+    const now = new Date().toISOString();
+    await organizationTwo.db.plans.insert({
+      _deleted: false,
+      _modified: now,
+      active: true,
+      created_at: now,
+      facility_access: ['monsters'],
+      id: 'plan-foreign',
+      name: 'CrossFit (Regular)',
+      organization_id: 'organization-2',
+      price: 450,
+      updated_at: now,
+      weekly_visit_limit: null,
+    });
+    await saveSubscriber(organizationOne, { id: 'subscriber-1', name: 'Ana Torres' });
+
+    await expect(
+      saveSubscription(organizationOne, {
+        billing_period: 'monthly',
+        id: 'subscription-1',
+        paid_until_date: '2026-08-04',
+        plan_id: 'plan-foreign',
+        start_date: '2026-07-04',
+        subscriber_id: 'subscriber-1',
+      }),
+    ).rejects.toThrow('Plan must belong to the active organization.');
+  });
+
+  it('shows both facility badges for combo plans in summaries', async () => {
+    const summaries = buildSubscriberSummaries({
+      plans: [{ facility_access: ['dragonz', 'monsters'], id: 'plan-combo' }],
+      subscribers: [{ id: 'subscriber-1', name: 'Ana Torres' }],
+      subscriptions: [
+        {
+          kind: 'crossfit',
+          paid_until_date: '2099-01-01',
+          plan_id: 'plan-combo',
+          subscriber_id: 'subscriber-1',
+        },
+      ],
+    });
+
+    expect(summaries[0]).toMatchObject({ plans: ['Gym', 'CrossFit'], status: 'Al corriente' });
+  });
+
   it('renews an active subscription from its paid-until date and records the renewal', async () => {
     const context = await createTestContext('organization-1');
     await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
