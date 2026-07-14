@@ -28,6 +28,7 @@ import {
   useGetSubscriberSummary,
   useRecordCheckIn,
 } from '@/lib/data/use-check-in-commands';
+import { ExpiredSubscriberCheckInError } from '@/lib/data/check-ins.commands';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 import { findSubscriberMatches } from '@/lib/domain/fuzzy-search';
 
@@ -105,6 +106,17 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (subscriber.status === 'Vencido') {
+        setOutcome({
+          kind: 'blocked',
+          subscriberSnapshot: subscriber,
+          subscriberId,
+        });
+        scheduleClear();
+        focusInput();
+        return;
+      }
+
       submittingRef.current = true;
       setIsSubmitting(true);
       setOutcome(null);
@@ -120,6 +132,16 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
         });
         scheduleClear();
       } catch (error) {
+        if (error instanceof ExpiredSubscriberCheckInError) {
+          setOutcome({
+            kind: 'blocked',
+            subscriberSnapshot: error.subscriber,
+            subscriberId,
+          });
+          scheduleClear();
+          return;
+        }
+
         console.error('Failed to record the check-in.', error);
         setOutcome({
           kind: 'error',
@@ -135,12 +157,12 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
   );
 
   const matches = useMemo(() => findSubscriberMatches(summaries, query), [query, summaries]);
-  const recordedSubscriber =
-    outcome?.kind === 'recorded'
+  const resultSubscriber =
+    outcome?.kind === 'recorded' || outcome?.kind === 'blocked'
       ? (summariesById.get(outcome.subscriberId) ?? outcome.subscriberSnapshot)
       : undefined;
-  const recordedSubscriptions = recordedSubscriber
-    ? (subscriptionsBySubscriber.get(recordedSubscriber.id) ?? [])
+  const resultSubscriptions = resultSubscriber
+    ? (subscriptionsBySubscriber.get(resultSubscriber.id) ?? [])
     : [];
 
   function handleOpenChange(next: boolean) {
@@ -277,8 +299,8 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
             {outcome ? (
               <CheckInResultCard
                 outcome={outcome}
-                subscriber={recordedSubscriber}
-                subscriptions={recordedSubscriptions}
+                subscriber={resultSubscriber}
+                subscriptions={resultSubscriptions}
               />
             ) : null}
           </form>

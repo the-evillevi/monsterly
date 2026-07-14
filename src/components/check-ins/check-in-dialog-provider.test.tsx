@@ -139,6 +139,25 @@ describe('CheckInDialogProvider', () => {
     await expect(listCheckIns(context)).resolves.toHaveLength(1);
   });
 
+  it('blocks expired members without writing a check-in and offers renewal', async () => {
+    const context = await createTestDataContext();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const subscriber = await seedMember(context, { paidUntil: formatDateOnly(yesterday) });
+    renderProvider(context, <DialogHarness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir check-in' }));
+    const input = await screen.findByLabelText('Miembro');
+    fireEvent.change(input, { target: { value: subscriber.check_in_code } });
+    fireEvent.submit(input.closest('form')!);
+
+    expect(await screen.findByText('Visita bloqueada')).toBeInTheDocument();
+    expect(screen.getByText(/Renueva antes de registrar la visita/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Renovar' })).toBeInTheDocument();
+    await expect(listCheckIns(context)).resolves.toHaveLength(0);
+    await waitFor(() => expect(input).toHaveFocus());
+  });
+
   it('redirects the legacy route to the dashboard and opens the dialog', async () => {
     const context = await createTestDataContext();
     render(

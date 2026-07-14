@@ -15,6 +15,11 @@ export type CheckInOutcome =
       subscriberSnapshot: SubscriberSummary;
       subscriberId: string;
     }
+  | {
+      kind: 'blocked';
+      subscriberSnapshot: SubscriberSummary;
+      subscriberId: string;
+    }
   | { kind: 'unknown'; query: string }
   | { kind: 'error'; message: string };
 
@@ -91,6 +96,59 @@ export function CheckInResultCard({
         role="alert"
       >
         <p className="text-sm text-destructive">No se encontró al miembro registrado.</p>
+      </div>
+    );
+  }
+
+  if (outcome.kind === 'blocked') {
+    const isStillExpired = subscriber.status === 'Vencido';
+    const paidUntil = subscriber.paidUntilDate
+      ? formatDateOnlyLabel(subscriber.paidUntilDate)
+      : null;
+
+    return (
+      <div
+        className={cn(
+          'grid gap-4 rounded-xl border p-6',
+          isStillExpired ? toneStyles.destructive.card : toneStyles.success.card,
+        )}
+        role="alert"
+      >
+        <div className="flex items-center gap-4">
+          <SubscriberAvatar
+            className="size-14 text-lg"
+            id={subscriber.id}
+            {...subscriber.nameParts}
+          />
+          <div className="grid min-w-0 gap-0.5">
+            <p
+              className={cn(
+                'text-xl font-black leading-tight',
+                isStillExpired ? toneStyles.destructive.headline : toneStyles.success.headline,
+              )}
+            >
+              {isStillExpired ? 'Visita bloqueada' : 'Membresía renovada'}
+            </p>
+            <p className="truncate text-lg font-semibold">{subscriber.name}</p>
+          </div>
+        </div>
+        <p className="text-sm">
+          {isStillExpired
+            ? paidUntil
+              ? `La membresía venció el ${paidUntil}. Renueva antes de registrar la visita.`
+              : 'La membresía está vencida. Renueva antes de registrar la visita.'
+            : 'Registra la visita nuevamente para permitir el acceso.'}
+        </p>
+        {isStillExpired && subscriptions.length > 0 ? (
+          <RenewDialog
+            subscriptions={subscriptions}
+            trigger={
+              <Button className="w-fit" size="sm" type="button" variant="outline">
+                Renovar
+              </Button>
+            }
+          />
+        ) : null}
       </div>
     );
   }

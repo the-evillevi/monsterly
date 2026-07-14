@@ -1,9 +1,18 @@
 import { duplicateScanWindowMinutes, isWithinDuplicateWindow } from '@/lib/domain/check-ins';
 import { newEntityId } from '@/lib/domain/subscriber-identity';
+import type { SubscriberSummary } from '@/lib/domain/subscriber-summaries';
 import type { CheckInDocument } from '@/lib/local-db/monsterly-db';
 
 import { activeRecordSelector } from './active-records';
 import type { DataModuleContext } from './data-layer-context';
+import { getSubscriberSummary } from './subscribers.queries';
+
+export class ExpiredSubscriberCheckInError extends Error {
+  constructor(readonly subscriber: SubscriberSummary) {
+    super('Expired subscribers cannot check in.');
+    this.name = 'ExpiredSubscriberCheckInError';
+  }
+}
 
 export type RecordCheckInInput = {
   now?: Date;
@@ -18,21 +27,19 @@ export type RecordCheckInResult = {
 };
 
 export async function recordCheckIn(
-  { activeOrganizationId, db }: DataModuleContext,
+  context: DataModuleContext,
   input: RecordCheckInInput,
 ): Promise<RecordCheckInResult> {
+  const { activeOrganizationId, db } = context;
   const now = input.now ?? new Date();
-  const subscriber = await db.subscribers
-    .findOne({
-      selector: {
-        ...activeRecordSelector(activeOrganizationId),
-        id: input.subscriber_id,
-      },
-    })
-    .exec();
+  const subscriber = await getSubscriberSummary(context, input.subscriber_id, now);
 
   if (!subscriber) {
     throw new Error('Subscriber must belong to the active organization.');
+  }
+
+  if (subscriber.status === 'Vencido') {
+    throw new ExpiredSubscriberCheckInError(subscriber);
   }
 
   const windowStartIso = new Date(

@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { cleanupTestDatabase, createTestDataContext } from '@/test/test-data-layer';
+import { formatDateOnly } from '@/lib/domain/date-only';
 
-import { recordCheckIn } from './check-ins.commands';
+import { ExpiredSubscriberCheckInError, recordCheckIn } from './check-ins.commands';
 import { listCheckIns } from './check-ins.queries';
 import { saveSubscriber } from './subscribers.commands';
 import { findSubscriberByCheckInCode } from './subscribers.queries';
+import { saveSubscription } from './subscriptions.commands';
 
 describe('check-ins data layer', () => {
   afterEach(async () => {
@@ -69,6 +71,26 @@ describe('check-ins data layer', () => {
     await expect(recordCheckIn(context, { subscriber_id: 'missing' })).rejects.toThrow(
       'Subscriber must belong to the active organization.',
     );
+  });
+
+  it('rejects expired members without writing a check-in', async () => {
+    const context = await createTestDataContext();
+    const subscriber = await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: formatDateOnly(yesterday),
+      start_date: '2026-01-01',
+      subscriber_id: subscriber.id,
+    });
+
+    await expect(recordCheckIn(context, { subscriber_id: subscriber.id })).rejects.toBeInstanceOf(
+      ExpiredSubscriberCheckInError,
+    );
+    await expect(listCheckIns(context)).resolves.toHaveLength(0);
   });
 
   it('resolves a subscriber from their check-in code', async () => {
