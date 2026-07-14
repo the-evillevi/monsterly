@@ -1,6 +1,6 @@
 import { parseDateOnly } from './date-only';
 import { planFacilityLabels } from './plan-facilities';
-import { formatFullName } from './subscriber-identity';
+import { formatFullName, type SubscriberNameParts } from './subscriber-identity';
 import { subscriptionKindLabels } from './subscription-kind';
 
 export type SubscriptionStatus = 'Al corriente' | 'Por vencer' | 'Vencido';
@@ -10,6 +10,7 @@ export type SubscriberStatus = SubscriptionStatus | 'Sin suscripción';
 export type SubscriptionPlan = 'Gym' | 'CrossFit';
 
 type SubscriberSummarySource = {
+  check_in_code?: string | null;
   id: string;
   maternal_last_name?: string | null;
   name: string;
@@ -31,8 +32,10 @@ type PlanSummarySource = {
 };
 
 export type SubscriberSummary = {
+  checkInCode?: string;
   id: string;
   name: string;
+  nameParts: SubscriberNameParts;
   paidUntilDate?: string;
   paidUntilLabel: string;
   phoneNumber?: string;
@@ -63,8 +66,14 @@ export function buildSubscriberSummaries({
     const latestPaidUntilDate = getLatestPaidUntilDate(subscriberSubscriptions);
 
     return {
+      checkInCode: subscriber.check_in_code ?? undefined,
       id: subscriber.id,
       name: formatFullName(subscriber),
+      nameParts: {
+        maternal_last_name: subscriber.maternal_last_name,
+        name: subscriber.name,
+        paternal_last_name: subscriber.paternal_last_name,
+      },
       paidUntilDate: latestPaidUntilDate,
       paidUntilLabel: formatPaidUntilLabel(latestPaidUntilDate),
       phoneNumber: subscriber.phone_number ?? undefined,

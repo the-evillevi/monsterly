@@ -1,8 +1,10 @@
 import { SubscriberAvatar } from '@/components/subscriber-avatar';
+import { RenewDialog } from '@/components/subscriptions/renew-dialog';
+import { Button } from '@/components/ui/button';
 import { formatRelativeTime } from '@/lib/domain/check-ins';
 import { formatDateOnlyLabel } from '@/lib/domain/date-only';
 import type { SubscriberSummary } from '@/lib/domain/subscriber-summaries';
-import type { SubscriberDocument } from '@/lib/local-db/monsterly-db';
+import type { SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 import { cn } from '@/lib/utils';
 
 export type CheckInOutcome =
@@ -10,10 +12,11 @@ export type CheckInOutcome =
       checkedInAt: string;
       duplicate: boolean;
       kind: 'recorded';
-      subscriber: SubscriberDocument;
-      summary?: SubscriberSummary;
+      subscriberSnapshot: SubscriberSummary;
+      subscriberId: string;
     }
-  | { code: string; kind: 'unknown' };
+  | { kind: 'unknown'; query: string }
+  | { kind: 'error'; message: string };
 
 type ToneStyle = {
   card: string;
@@ -41,7 +44,29 @@ const toneStyles: Record<string, ToneStyle> = {
   },
 };
 
-export function CheckInResultCard({ outcome }: { outcome: CheckInOutcome }) {
+type CheckInResultCardProps = {
+  outcome: CheckInOutcome;
+  subscriber?: SubscriberSummary;
+  subscriptions?: SubscriptionDocument[];
+};
+
+export function CheckInResultCard({
+  outcome,
+  subscriber,
+  subscriptions = [],
+}: CheckInResultCardProps) {
+  if (outcome.kind === 'error') {
+    return (
+      <div
+        className="grid gap-1 rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center"
+        role="alert"
+      >
+        <p className="text-lg font-bold text-destructive">No se pudo registrar la visita</p>
+        <p className="text-sm text-muted-foreground">{outcome.message}</p>
+      </div>
+    );
+  }
+
   if (outcome.kind === 'unknown') {
     return (
       <div
@@ -50,18 +75,28 @@ export function CheckInResultCard({ outcome }: { outcome: CheckInOutcome }) {
         )}
         role="status"
       >
-        <p className="text-lg font-bold text-destructive">Código no reconocido</p>
+        <p className="text-lg font-bold text-destructive">Miembro no encontrado</p>
         <p className="text-sm text-muted-foreground">
-          Revisa el código <strong className="text-foreground">{outcome.code}</strong> e inténtalo
-          de nuevo.
+          Revisa la búsqueda <strong className="text-foreground">{outcome.query}</strong> e
+          inténtalo de nuevo.
         </p>
       </div>
     );
   }
 
-  const { checkedInAt, duplicate, subscriber, summary } = outcome;
-  const status = summary?.status ?? 'Sin suscripción';
-  const { headline, message, tone } = describeStatus(status, summary);
+  if (!subscriber) {
+    return (
+      <div
+        className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center"
+        role="alert"
+      >
+        <p className="text-sm text-destructive">No se encontró al miembro registrado.</p>
+      </div>
+    );
+  }
+
+  const { checkedInAt, duplicate } = outcome;
+  const { headline, message, tone } = describeStatus(subscriber.status, subscriber);
   const style = toneStyles[tone];
 
   return (
@@ -70,13 +105,11 @@ export function CheckInResultCard({ outcome }: { outcome: CheckInOutcome }) {
         <SubscriberAvatar
           className="size-14 text-lg"
           id={subscriber.id}
-          maternal_last_name={subscriber.maternal_last_name}
-          name={subscriber.name}
-          paternal_last_name={subscriber.paternal_last_name}
+          {...subscriber.nameParts}
         />
         <div className="grid min-w-0 gap-0.5">
           <p className={cn('text-xl font-black leading-tight', style.headline)}>{headline}</p>
-          <p className="truncate text-lg font-semibold">{summary?.name ?? subscriber.name}</p>
+          <p className="truncate text-lg font-semibold">{subscriber.name}</p>
         </div>
       </div>
       <p className="text-sm">{message}</p>
@@ -84,6 +117,16 @@ export function CheckInResultCard({ outcome }: { outcome: CheckInOutcome }) {
         <p className="text-sm font-medium opacity-80">
           Ya registrado {formatRelativeTime(checkedInAt)}.
         </p>
+      ) : null}
+      {subscriber.status === 'Por vencer' && subscriptions.length > 0 ? (
+        <RenewDialog
+          subscriptions={subscriptions}
+          trigger={
+            <Button className="w-fit" size="sm" type="button" variant="outline">
+              Renovar
+            </Button>
+          }
+        />
       ) : null}
     </div>
   );

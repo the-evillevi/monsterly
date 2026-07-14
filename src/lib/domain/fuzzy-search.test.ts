@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { isWithinOneEdit, normalizeText, subscriberMatchesQuery } from './fuzzy-search';
+import {
+  findSubscriberMatches,
+  isWithinOneEdit,
+  normalizeText,
+  subscriberMatchesQuery,
+} from './fuzzy-search';
 
 describe('normalizeText', () => {
   it('lowercases and strips diacritics', () => {
@@ -60,5 +65,34 @@ describe('subscriberMatchesQuery', () => {
   it('does not fuzzy-match very short tokens', () => {
     // "ojo" is one edit from "ana"? no — but guards against loose 3-char noise.
     expect(subscriberMatchesQuery({ name: 'Ivan' }, 'ban')).toBe(false);
+  });
+});
+
+describe('findSubscriberMatches', () => {
+  const subscribers = [
+    { checkInCode: '482913', name: 'José Ramírez', phoneNumber: '+52 55 1111 2222' },
+    { checkInCode: '112233', name: 'Martha López', phoneNumber: '+52 55 4829 1300' },
+    { checkInCode: '774829', name: 'Lucía Santos', phoneNumber: '+52 55 3333 4444' },
+  ];
+
+  it('ranks exact PIN ahead of PIN and phone substrings', () => {
+    expect(
+      findSubscriberMatches(subscribers, '482913').map((subscriber) => subscriber.name),
+    ).toEqual(['José Ramírez', 'Martha López']);
+  });
+
+  it('finds normalized and one-edit names', () => {
+    expect(findSubscriberMatches(subscribers, 'jose')[0]?.name).toBe('José Ramírez');
+    expect(findSubscriberMatches(subscribers, 'marta')[0]?.name).toBe('Martha López');
+  });
+
+  it('finds formatted phone digits and PIN fragments', () => {
+    expect(findSubscriberMatches(subscribers, '11112222')[0]?.name).toBe('José Ramírez');
+    expect(findSubscriberMatches(subscribers, '7748')[0]?.name).toBe('Lucía Santos');
+  });
+
+  it('requires two characters and caps the result list', () => {
+    expect(findSubscriberMatches(subscribers, '4')).toEqual([]);
+    expect(findSubscriberMatches(subscribers, '55', 2)).toHaveLength(2);
   });
 });

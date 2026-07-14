@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 
 import { SyncStatus } from '@/components/sync-status';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useCheckInDialog } from '@/components/check-ins/check-in-dialog-context';
 import {
   Sidebar,
   SidebarContent,
@@ -18,15 +19,14 @@ import {
 } from '@/components/ui/sidebar';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: ScanLine, label: 'Check-in', path: '/check-in' },
   { icon: Users, label: 'Suscriptores', path: '/subscribers' },
   { icon: Settings, label: 'Ajustes', path: '/settings' },
 ];
 
 export function AppSidebar() {
+  const { openSearch } = useCheckInDialog();
   const { pathname } = useLocation();
-  const { state } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
   const collapsed = state === 'collapsed';
 
   return (
@@ -52,6 +52,28 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/dashboard'} tooltip="Dashboard">
+                  <NavLink to="/dashboard">
+                    <LayoutDashboard aria-hidden />
+                    <span>Dashboard</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    openSearch();
+                    if (isMobile) {
+                      setOpenMobile(false);
+                    }
+                  }}
+                  tooltip="Check-in"
+                >
+                  <ScanLine aria-hidden />
+                  <span>Check-in</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton

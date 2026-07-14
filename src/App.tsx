@@ -1,9 +1,9 @@
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 
 import { AppSidebar } from '@/components/app-sidebar';
+import { LegacyCheckInRedirect } from '@/components/check-ins/legacy-check-in-redirect';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { UpdatePrompt } from '@/components/update-prompt';
-import { CheckInPage } from '@/pages/check-in-page';
 import { DashboardPage } from '@/pages/dashboard-page';
 import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
 import { EditSubscriptionPage } from '@/pages/edit-subscription-page';
@@ -27,7 +27,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/check-in" element={<CheckInPage />} />
+            <Route path="/check-in" element={<LegacyCheckInRedirect />} />
             <Route path="/subscribers" element={<SubscribersPage />} />
             <Route path="/subscribers/new" element={<NewSubscriberPage />} />
             <Route path="/subscribers/:slug/edit" element={<EditSubscriberPage />} />

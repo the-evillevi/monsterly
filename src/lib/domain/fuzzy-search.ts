@@ -66,30 +66,35 @@ export function isWithinOneEdit(a: string, b: string): boolean {
   return true;
 }
 
-type SearchableSubscriber = {
+export type SearchableSubscriber = {
+  checkInCode?: string;
   name: string;
   phoneNumber?: string;
 };
 
-/**
- * Forgiving match by name or phone. Every whitespace-separated token must hit
- * the name (as a substring, or within one typo of a name word for tokens of at
- * least four characters); a numeric query also matches on phone digits.
- */
-export function subscriberMatchesQuery(subscriber: SearchableSubscriber, query: string): boolean {
+function subscriberMatchRank(subscriber: SearchableSubscriber, query: string): number | null {
   const trimmed = query.trim();
 
   if (!trimmed) {
-    return true;
+    return null;
   }
 
   const digitsQuery = trimmed.replace(/\D/g, '');
+  const checkInCode = subscriber.checkInCode?.replace(/\D/g, '');
+
+  if (digitsQuery && checkInCode === digitsQuery) {
+    return 0;
+  }
+
+  if (digitsQuery && checkInCode?.includes(digitsQuery)) {
+    return 1;
+  }
 
   if (digitsQuery && subscriber.phoneNumber) {
     const phoneDigits = subscriber.phoneNumber.replace(/\D/g, '');
 
     if (phoneDigits.includes(digitsQuery)) {
-      return true;
+      return 2;
     }
   }
 
@@ -97,9 +102,55 @@ export function subscriberMatchesQuery(subscriber: SearchableSubscriber, query: 
   const nameWords = normalizedName.split(/\s+/).filter(Boolean);
   const tokens = normalizeText(trimmed).split(/\s+/).filter(Boolean);
 
-  return tokens.every(
-    (token) =>
-      normalizedName.includes(token) ||
-      (token.length >= 4 && nameWords.some((word) => isWithinOneEdit(word, token))),
-  );
+  if (tokens.every((token) => normalizedName.includes(token))) {
+    return 3;
+  }
+
+  if (
+    tokens.every(
+      (token) =>
+        normalizedName.includes(token) ||
+        (token.length >= 4 && nameWords.some((word) => isWithinOneEdit(word, token))),
+    )
+  ) {
+    return 4;
+  }
+
+  return null;
+}
+
+/**
+ * Forgiving match by name or phone. Every whitespace-separated token must hit
+ * the name (as a substring, or within one typo of a name word for tokens of at
+ * least four characters); a numeric query also matches on phone digits.
+ */
+export function subscriberMatchesQuery(subscriber: SearchableSubscriber, query: string): boolean {
+  if (!query.trim()) {
+    return true;
+  }
+
+  return subscriberMatchRank(subscriber, query) !== null;
+}
+
+/** Ranked front-desk lookup. Empty/one-character queries stay quiet so opening
+ * the dialog never dumps the full member directory into a small surface. */
+export function findSubscriberMatches<Subscriber extends SearchableSubscriber>(
+  subscribers: readonly Subscriber[],
+  query: string,
+  limit = 8,
+): Subscriber[] {
+  if (normalizeText(query.trim()).length < 2) {
+    return [];
+  }
+
+  return subscribers
+    .map((subscriber, index) => ({
+      index,
+      rank: subscriberMatchRank(subscriber, query),
+      subscriber,
+    }))
+    .filter((match): match is typeof match & { rank: number } => match.rank !== null)
+    .sort((left, right) => left.rank - right.rank || left.index - right.index)
+    .slice(0, limit)
+    .map((match) => match.subscriber);
 }

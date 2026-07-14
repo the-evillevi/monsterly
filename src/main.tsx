@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './styles.css';
 import App from './App.tsx';
+import { CheckInDialogProvider } from '@/components/check-ins/check-in-dialog-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { DataLayerProvider } from '@/lib/data/data-layer-provider';
 import { SyncProvider } from '@/lib/sync/sync-provider';
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <DataLayerProvider>
           <SyncProvider>
-            <App />
+            <CheckInDialogProvider>
+              <App />
+            </CheckInDialogProvider>
           </SyncProvider>
         </DataLayerProvider>
       </BrowserRouter>

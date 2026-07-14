@@ -1,7 +1,6 @@
-import { Link } from 'react-router-dom';
-
 import { CheckInFeed } from '@/components/dashboard/check-in-feed';
-import { StatTile, type StatTone } from '@/components/dashboard/stat-tile';
+import { useCheckInDialog } from '@/components/check-ins/check-in-dialog-context';
+import { StatTile, type StatTileProps } from '@/components/dashboard/stat-tile';
 import { PageFrame } from '@/components/page-frame';
 import { Button } from '@/components/ui/button';
 import { useCheckIns } from '@/lib/data/use-check-ins';
@@ -11,6 +10,7 @@ import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
 const FEED_LIMIT = 10;
 
 export function DashboardPage() {
+  const { openSearch } = useCheckInDialog();
   const { summaries } = useSubscriberSummaries();
   const { ghosts } = useGhosts();
   const { items, uniqueTodayCount } = useCheckIns();
@@ -18,7 +18,7 @@ export function DashboardPage() {
   const countByStatus = (status: string) =>
     summaries.filter((summary) => summary.status === status).length;
 
-  const tiles: { label: string; to: string; tone: StatTone; value: number }[] = [
+  const tiles: StatTileProps[] = [
     {
       label: 'Al corriente',
       to: '/subscribers?tab=al-corriente',
@@ -37,7 +37,7 @@ export function DashboardPage() {
       tone: 'destructive',
       value: countByStatus('Vencido'),
     },
-    { label: 'Visitas hoy', to: '/check-in', tone: 'primary', value: uniqueTodayCount },
+    { label: 'Visitas hoy', onClick: openSearch, tone: 'primary', value: uniqueTodayCount },
     {
       label: 'Fantasmas',
       to: '/subscribers?tab=fantasmas',
@@ -51,8 +51,8 @@ export function DashboardPage() {
       title="Dashboard"
       subtitle="El pulso operativo de tu gimnasio de un vistazo."
       actions={
-        <Button asChild>
-          <Link to="/check-in">Registrar visita</Link>
+        <Button onClick={openSearch} type="button">
+          Registrar visita
         </Button>
       }
     >
@@ -61,13 +61,7 @@ export function DashboardPage() {
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
       >
         {tiles.map((tile) => (
-          <StatTile
-            key={tile.label}
-            label={tile.label}
-            to={tile.to}
-            tone={tile.tone}
-            value={tile.value}
-          />
+          <StatTile key={tile.label} {...tile} />
         ))}
       </section>
 

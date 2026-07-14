@@ -11,6 +11,7 @@ function summary(overrides: Partial<SubscriberSummary> = {}): SubscriberSummary 
   return {
     id: 'subscriber-1',
     name: 'Mariana Soto',
+    nameParts: { name: 'Mariana', paternal_last_name: 'Soto' },
     paidUntilLabel: 'Sin suscripción',
     plans: [],
     status: 'Al corriente',
