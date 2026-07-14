@@ -7,6 +7,7 @@ import {
   type SubscriberSummary,
   type SubscriptionStatus,
 } from '@/lib/domain/subscriber-summaries';
+import type { SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
 import { DataLayerContext } from './data-layer-context';
 import { watchPlans } from './plans.queries';
@@ -16,6 +17,7 @@ import type { SubscriberWithSubscriptions } from './subscriber-types';
 export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
   const { activeOrganizationId, db } = useContext(DataLayerContext);
   const [summaries, setSummaries] = useState<SubscriberSummary[]>([]);
+  const [subscribers, setSubscribers] = useState<SubscriberWithSubscriptions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -29,13 +31,14 @@ export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
       watchSubscribers({ activeOrganizationId, db }),
       // Plans feed the facility badges (a Combo member shows both gyms).
       watchPlans({ activeOrganizationId, db }),
-    ]).subscribe(([subscribers, plans]) => {
+    ]).subscribe(([nextSubscribers, plans]) => {
       const nextSummaries = buildSubscriberSummaries({
         plans,
-        subscribers,
-        subscriptions: subscribers.flatMap((subscriber) => subscriber.subscriptions),
+        subscribers: nextSubscribers,
+        subscriptions: nextSubscribers.flatMap((subscriber) => subscriber.subscriptions),
       });
 
+      setSubscribers(nextSubscribers);
       setSummaries(nextSummaries);
       setIsLoading(false);
     });
@@ -49,8 +52,18 @@ export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
     [filterStatus, summaries],
   );
 
+  // Per-member subscriptions for the row-level "Renovar" action.
+  const subscriptionsBySubscriber = useMemo(
+    () =>
+      new Map<string, SubscriptionDocument[]>(
+        subscribers.map((subscriber) => [subscriber.id, subscriber.subscriptions]),
+      ),
+    [subscribers],
+  );
+
   return {
     isLoading,
+    subscriptionsBySubscriber,
     summaries: filteredSummaries,
   };
 }

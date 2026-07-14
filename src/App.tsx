@@ -1,9 +1,7 @@
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 
 import { AppSidebar } from '@/components/app-sidebar';
-import { PageFrame } from '@/components/page-frame';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { SubscriberList } from '@/components/subscribers/subscriber-list';
 import { UpdatePrompt } from '@/components/update-prompt';
 import { CheckInPage } from '@/pages/check-in-page';
 import { DashboardPage } from '@/pages/dashboard-page';
@@ -13,22 +11,6 @@ import { NewSubscriberPage } from '@/pages/new-subscriber-page';
 import { NewSubscriptionPage } from '@/pages/new-subscription-page';
 import { SettingsPage } from '@/pages/settings-page';
 import { SubscribersPage } from '@/pages/subscribers-page';
-
-function VencidosPage() {
-  return (
-    <PageFrame title="Vencidos" subtitle="Members who already need payment follow-up.">
-      <SubscriberList filterStatus="Vencido" />
-    </PageFrame>
-  );
-}
-
-function PorVencerPage() {
-  return (
-    <PageFrame title="Por vencer" subtitle="Subscriptions expiring inside the warning window.">
-      <SubscriberList filterStatus="Por vencer" />
-    </PageFrame>
-  );
-}
 
 function App() {
   return (
@@ -54,8 +36,11 @@ function App() {
               path="/subscribers/:slug/subscriptions/:subscriptionId/edit"
               element={<EditSubscriptionPage />}
             />
-            <Route path="/vencidos" element={<VencidosPage />} />
-            <Route path="/por-vencer" element={<PorVencerPage />} />
+            <Route path="/vencidos" element={<Navigate to="/subscribers?tab=vencidos" replace />} />
+            <Route
+              path="/por-vencer"
+              element={<Navigate to="/subscribers?tab=por-vencer" replace />}
+            />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

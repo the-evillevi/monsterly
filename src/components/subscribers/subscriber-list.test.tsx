@@ -1,67 +1,47 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { DataLayerContext } from '@/lib/data/data-layer-context';
-import { saveSubscriber } from '@/lib/data/subscribers.commands';
-import { saveSubscription } from '@/lib/data/subscriptions.commands';
-import type { SubscriptionStatus } from '@/lib/domain/subscriber-summaries';
-import { cleanupTestDatabase, createTestDataContext } from '@/test/test-data-layer';
+import type { SubscriberSummary } from '@/lib/domain/subscriber-summaries';
+import type { SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
 import { SubscriberList } from './subscriber-list';
 
-async function renderList(filterStatus?: SubscriptionStatus) {
-  const context = await createTestDataContext();
+function summary(overrides: Partial<SubscriberSummary> = {}): SubscriberSummary {
+  return {
+    id: 'subscriber-1',
+    name: 'Mariana Soto',
+    paidUntilLabel: 'Sin suscripción',
+    plans: [],
+    status: 'Al corriente',
+    ...overrides,
+  };
+}
 
+function renderList(
+  summaries: SubscriberSummary[],
+  subscriptionsBySubscriber = new Map<string, SubscriptionDocument[]>(),
+) {
   render(
-    <DataLayerContext.Provider value={context}>
-      <MemoryRouter>
-        <SubscriberList filterStatus={filterStatus} />
-      </MemoryRouter>
-    </DataLayerContext.Provider>,
+    <MemoryRouter>
+      <SubscriberList subscriptionsBySubscriber={subscriptionsBySubscriber} summaries={summaries} />
+    </MemoryRouter>,
   );
-
-  return context;
 }
 
 describe('SubscriberList', () => {
-  afterEach(async () => {
-    await cleanupTestDatabase();
-  });
+  it('shows name, status badge, phone link, plan badges, and the slug edit link', () => {
+    renderList([
+      summary({
+        paidUntilDate: '2199-12-31',
+        paidUntilLabel: '31 dic',
+        phoneNumber: '+52 55 1111 0001',
+        plans: ['Gym', 'CrossFit'],
+        slug: 'mariana-soto-ab12',
+      }),
+    ]);
 
-  it('shows name, status badge, phone link, and one badge per subscription kind', async () => {
-    const context = await createTestDataContext();
-    await saveSubscriber(context, {
-      id: 'subscriber-1',
-      name: 'Mariana Soto',
-      phone_number: '+52 55 1111 0001',
-    });
-    await saveSubscription(context, {
-      billing_period: 'monthly',
-      id: 'subscription-1',
-      kind: 'gym',
-      paid_until_date: '2199-12-31',
-      start_date: '2026-07-01',
-      subscriber_id: 'subscriber-1',
-    });
-    await saveSubscription(context, {
-      billing_period: 'monthly',
-      id: 'subscription-2',
-      kind: 'crossfit',
-      paid_until_date: '2199-12-31',
-      start_date: '2026-07-01',
-      subscriber_id: 'subscriber-1',
-    });
-
-    render(
-      <DataLayerContext.Provider value={context}>
-        <MemoryRouter>
-          <SubscriberList />
-        </MemoryRouter>
-      </DataLayerContext.Provider>,
-    );
-
-    expect(await screen.findByText('Mariana Soto')).toBeInTheDocument();
+    expect(screen.getByText('Mariana Soto')).toBeInTheDocument();
     expect(screen.getByText('Al corriente')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '+52 55 1111 0001' })).toHaveAttribute(
       'href',
@@ -69,52 +49,46 @@ describe('SubscriberList', () => {
     );
     expect(screen.getByText('Gym')).toBeInTheDocument();
     expect(screen.getByText('CrossFit')).toBeInTheDocument();
-    // The edit link routes by slug, never by the primary key.
-    expect(screen.getByRole('link', { name: 'Editar Mariana Soto' }).getAttribute('href')).toMatch(
-      /^\/subscribers\/mariana-soto-[a-z2-9]{4}\/edit$/,
+    expect(screen.getByRole('link', { name: 'Editar Mariana Soto' })).toHaveAttribute(
+      'href',
+      '/subscribers/mariana-soto-ab12/edit',
     );
   });
 
-  it('shows a single Sin suscripción badge and no plan badges without subscriptions', async () => {
-    const context = await createTestDataContext();
-    await saveSubscriber(context, { id: 'subscriber-1', name: 'Carlos Perez' });
+  it('offers Renovar only when the member has subscriptions', () => {
+    const withSubscription = summary({ id: 'with-sub', name: 'Con Suscripción', slug: 'con-sub' });
+    const withoutSubscription = summary({
+      id: 'no-sub',
+      name: 'Sin Suscripción',
+      slug: 'sin-sub',
+      status: 'Sin suscripción',
+    });
 
-    render(
-      <DataLayerContext.Provider value={context}>
-        <MemoryRouter>
-          <SubscriberList />
-        </MemoryRouter>
-      </DataLayerContext.Provider>,
+    renderList(
+      [withSubscription, withoutSubscription],
+      new Map([
+        [
+          'with-sub',
+          [
+            {
+              billing_period: 'monthly',
+              id: 'subscription-1',
+              kind: 'gym',
+              paid_until_date: '2199-12-31',
+              start_date: '2026-07-01',
+            } as SubscriptionDocument,
+          ],
+        ],
+      ]),
     );
 
-    expect(await screen.findByText('Carlos Perez')).toBeInTheDocument();
-    expect(screen.getAllByText('Sin suscripción')).toHaveLength(1);
-    expect(screen.queryByText('Gym')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /\+52/ })).not.toBeInTheDocument();
+    // One Renovar button — the member without subscriptions has none.
+    expect(screen.getAllByRole('button', { name: 'Renovar' })).toHaveLength(1);
   });
 
-  it('filters by status', async () => {
-    const context = await renderList('Vencido');
-    await saveSubscriber(context, { id: 'subscriber-1', name: 'Al Día' });
-    await saveSubscriber(context, { id: 'subscriber-2', name: 'Atrasado' });
-    await saveSubscription(context, {
-      billing_period: 'monthly',
-      id: 'subscription-1',
-      kind: 'gym',
-      paid_until_date: '2199-12-31',
-      start_date: '2026-06-01',
-      subscriber_id: 'subscriber-1',
-    });
-    await saveSubscription(context, {
-      billing_period: 'monthly',
-      id: 'subscription-2',
-      kind: 'gym',
-      paid_until_date: '2020-01-01',
-      start_date: '2019-12-01',
-      subscriber_id: 'subscriber-2',
-    });
+  it('renders an empty state when there are no matches', () => {
+    renderList([]);
 
-    expect(await screen.findByText('Atrasado')).toBeInTheDocument();
-    expect(screen.queryByText('Al Día')).not.toBeInTheDocument();
+    expect(screen.getByText('No hay suscriptores que coincidan.')).toBeInTheDocument();
   });
 });
