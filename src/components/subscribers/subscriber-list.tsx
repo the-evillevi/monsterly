@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
+import { ScanLine } from 'lucide-react';
 
+import { useCheckInDialog } from '@/components/check-ins/check-in-dialog-context';
 import { StatusBadge } from '@/components/status-badge';
 import { SubscriberAvatar } from '@/components/subscriber-avatar';
 import { RenewDialog } from '@/components/subscriptions/renew-dialog';
@@ -25,6 +27,8 @@ export function SubscriberList({
   subscriptionsBySubscriber,
   summaries,
 }: SubscriberListProps) {
+  const { recordSubscriber } = useCheckInDialog();
+
   if (summaries.length === 0) {
     return <p className="text-muted-foreground">{emptyMessage}</p>;
   }
@@ -39,7 +43,7 @@ export function SubscriberList({
             <Card className="p-4">
               <article className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div className="flex items-center gap-3">
-                  <SubscriberAvatar id={subscriber.id} name={subscriber.name} />
+                  <SubscriberAvatar id={subscriber.id} {...subscriber.nameParts} />
                   <div className="grid gap-0.5">
                     <strong className="text-foreground">{subscriber.name}</strong>
                     {subscriber.phoneNumber ? (
@@ -50,6 +54,9 @@ export function SubscriberList({
                         {subscriber.phoneNumber}
                       </a>
                     ) : null}
+                    <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                      PIN {subscriber.checkInCode ?? '—'}
+                    </span>
                   </div>
                 </div>
                 <div className="grid gap-2 sm:justify-items-end">
@@ -70,6 +77,15 @@ export function SubscriberList({
                     </time>
                   ) : null}
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <Button
+                      onClick={() => void recordSubscriber(subscriber.id)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      <ScanLine aria-hidden />
+                      Registrar visita
+                    </Button>
                     {subscriptions.length > 0 ? (
                       <RenewDialog subscriptions={subscriptions} />
                     ) : null}

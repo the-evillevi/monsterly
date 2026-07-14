@@ -23,7 +23,7 @@ function App() {
             Monsterly
           </NavLink>
         </header>
-        <main className="w-full max-w-6xl p-4 sm:p-6 lg:p-10">
+        <div className="w-full max-w-6xl p-4 sm:p-6 lg:p-10">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -44,7 +44,7 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
-        </main>
+        </div>
         <UpdatePrompt />
       </SidebarInset>
     </SidebarProvider>

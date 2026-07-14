@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 const TABS = [
   { dot: null, label: 'Todos', status: null, value: 'todos' },
-  { dot: null, label: 'Al corriente', status: 'Al corriente', value: 'al-corriente' },
+  { dot: 'bg-success', label: 'Al corriente', status: 'Al corriente', value: 'al-corriente' },
   { dot: 'bg-warning', label: 'Por vencer', status: 'Por vencer', value: 'por-vencer' },
   { dot: 'bg-destructive', label: 'Vencidos', status: 'Vencido', value: 'vencidos' },
   { dot: 'bg-muted-foreground', label: 'Fantasmas', status: 'ghost', value: 'fantasmas' },

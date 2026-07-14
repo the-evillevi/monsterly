@@ -1,4 +1,5 @@
 import type { SubscriberStatus, SubscriptionPlan } from './subscriber-summaries';
+import type { SubscriberNameParts } from './subscriber-identity';
 
 // An active member unseen this long is a churn risk worth a follow-up.
 export const ghostThresholdDays = 14;
@@ -7,10 +8,12 @@ export type GhostSource = {
   // max(latest subscription start_date, latest renewal created_at); the "last
   // seen" fallback before any check-in exists (cold start).
   baselineDate?: string;
+  checkInCode?: string;
   id: string;
   // Most recent check-in timestamp, if the member has ever scanned.
   latestCheckInAt?: string;
   name: string;
+  nameParts: SubscriberNameParts;
   phoneNumber?: string;
   plans: SubscriptionPlan[];
   slug?: string;
@@ -19,10 +22,12 @@ export type GhostSource = {
 
 export type GhostRecord = {
   daysMissing: number;
+  checkInCode?: string;
   id: string;
   lastSeenDate: string;
   lastSeenKind: 'baseline' | 'check_in';
   name: string;
+  nameParts: SubscriberNameParts;
   phoneNumber?: string;
   plans: SubscriptionPlan[];
   slug?: string;
@@ -60,11 +65,13 @@ export function buildGhosts(sources: GhostSource[], today = new Date()): GhostRe
       const daysMissing = todayIndex - toLocalDayIndex(lastSeenDate);
 
       return {
+        checkInCode: source.checkInCode,
         daysMissing,
         id: source.id,
         lastSeenDate,
         lastSeenKind: source.latestCheckInAt ? 'check_in' : 'baseline',
         name: source.name,
+        nameParts: source.nameParts,
         phoneNumber: source.phoneNumber,
         plans: source.plans,
         slug: source.slug,

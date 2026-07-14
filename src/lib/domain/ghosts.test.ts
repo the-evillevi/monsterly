@@ -8,6 +8,7 @@ function source(overrides: Partial<GhostSource> = {}): GhostSource {
   return {
     id: 'member-1',
     name: 'Ana Torres',
+    nameParts: { name: 'Ana', paternal_last_name: 'Torres' },
     plans: ['Gym'],
     status: 'Al corriente',
     ...overrides,

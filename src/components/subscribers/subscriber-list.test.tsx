@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { CheckInDialogContext } from '@/components/check-ins/check-in-dialog-context';
 import type { SubscriberSummary } from '@/lib/domain/subscriber-summaries';
 import type { SubscriptionDocument } from '@/lib/local-db/monsterly-db';
 
@@ -10,6 +11,7 @@ import { SubscriberList } from './subscriber-list';
 function summary(overrides: Partial<SubscriberSummary> = {}): SubscriberSummary {
   return {
     id: 'subscriber-1',
+    checkInCode: '123456',
     name: 'Mariana Soto',
     nameParts: { name: 'Mariana', paternal_last_name: 'Soto' },
     paidUntilLabel: 'Sin suscripción',
@@ -23,11 +25,20 @@ function renderList(
   summaries: SubscriberSummary[],
   subscriptionsBySubscriber = new Map<string, SubscriptionDocument[]>(),
 ) {
+  const recordSubscriber = vi.fn().mockResolvedValue(undefined);
+
   render(
-    <MemoryRouter>
-      <SubscriberList subscriptionsBySubscriber={subscriptionsBySubscriber} summaries={summaries} />
-    </MemoryRouter>,
+    <CheckInDialogContext.Provider value={{ openSearch: vi.fn(), recordSubscriber }}>
+      <MemoryRouter>
+        <SubscriberList
+          subscriptionsBySubscriber={subscriptionsBySubscriber}
+          summaries={summaries}
+        />
+      </MemoryRouter>
+    </CheckInDialogContext.Provider>,
   );
+
+  return recordSubscriber;
 }
 
 describe('SubscriberList', () => {
@@ -85,6 +96,15 @@ describe('SubscriberList', () => {
 
     // One Renovar button — the member without subscriptions has none.
     expect(screen.getAllByRole('button', { name: 'Renovar' })).toHaveLength(1);
+  });
+
+  it('shows the PIN and records a visit from the card action', () => {
+    const recordSubscriber = renderList([summary()]);
+
+    expect(screen.getByText('PIN 123456')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar visita' }));
+
+    expect(recordSubscriber).toHaveBeenCalledWith('subscriber-1');
   });
 
   it('renders an empty state when there are no matches', () => {

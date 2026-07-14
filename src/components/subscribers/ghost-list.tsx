@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
+import { ScanLine } from 'lucide-react';
 
+import { useCheckInDialog } from '@/components/check-ins/check-in-dialog-context';
 import { SubscriberAvatar } from '@/components/subscriber-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +25,8 @@ function lastSeenLabel(ghost: GhostRecord) {
 }
 
 export function GhostList({ ghosts }: GhostListProps) {
+  const { recordSubscriber } = useCheckInDialog();
+
   if (ghosts.length === 0) {
     return (
       <p className="text-muted-foreground">
@@ -38,7 +42,7 @@ export function GhostList({ ghosts }: GhostListProps) {
           <Card className="p-4">
             <article className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
               <div className="flex items-center gap-3">
-                <SubscriberAvatar id={ghost.id} name={ghost.name} />
+                <SubscriberAvatar id={ghost.id} {...ghost.nameParts} />
                 <div className="grid gap-0.5">
                   <strong className="text-foreground">{ghost.name}</strong>
                   {ghost.phoneNumber ? (
@@ -51,6 +55,9 @@ export function GhostList({ ghosts }: GhostListProps) {
                   ) : (
                     <span className="text-sm text-muted-foreground">Sin teléfono</span>
                   )}
+                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                    PIN {ghost.checkInCode ?? '—'}
+                  </span>
                 </div>
               </div>
               <div className="grid gap-2 sm:justify-items-end">
@@ -58,13 +65,24 @@ export function GhostList({ ghosts }: GhostListProps) {
                   {ghost.daysMissing} días sin venir
                 </Badge>
                 <span className="text-sm text-muted-foreground">{lastSeenLabel(ghost)}</span>
-                {ghost.slug ? (
-                  <Button asChild size="sm" variant="ghost">
-                    <Link aria-label={`Ver ${ghost.name}`} to={`/subscribers/${ghost.slug}/edit`}>
-                      Ver perfil
-                    </Link>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <Button
+                    onClick={() => void recordSubscriber(ghost.id)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <ScanLine aria-hidden />
+                    Registrar visita
                   </Button>
-                ) : null}
+                  {ghost.slug ? (
+                    <Button asChild size="sm" variant="ghost">
+                      <Link aria-label={`Ver ${ghost.name}`} to={`/subscribers/${ghost.slug}/edit`}>
+                        Ver perfil
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </article>
           </Card>

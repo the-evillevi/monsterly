@@ -63,9 +63,15 @@ function buildGhostSources(
 
     return {
       baselineDate: baselineBySubscriber.get(subscriber.id),
+      checkInCode: summary?.checkInCode,
       id: subscriber.id,
       latestCheckInAt: latestCheckInBySubscriber.get(subscriber.id),
       name: summary?.name ?? subscriber.name,
+      nameParts: summary?.nameParts ?? {
+        maternal_last_name: subscriber.maternal_last_name,
+        name: subscriber.name,
+        paternal_last_name: subscriber.paternal_last_name,
+      },
       phoneNumber: summary?.phoneNumber,
       plans: summary?.plans ?? [],
       slug: summary?.slug,
