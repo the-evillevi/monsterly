@@ -17,7 +17,7 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
   return (
     <Button
       aria-label={label}
-      className={cn('justify-start gap-2', className)}
+      className={cn(showLabel ? 'justify-start gap-2' : 'justify-center', className)}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       size={showLabel ? 'default' : 'icon'}
       title={label}
