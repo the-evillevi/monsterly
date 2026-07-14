@@ -2,6 +2,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 
 import { combineLatest } from 'rxjs';
 
+import { useLocalDayKey } from '@/hooks/use-local-day-key';
 import {
   buildSubscriberSummaries,
   type SubscriberSummary,
@@ -19,6 +20,7 @@ export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
   const [summaries, setSummaries] = useState<SubscriberSummary[]>([]);
   const [subscribers, setSubscribers] = useState<SubscriberWithSubscriptions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const localDayKey = useLocalDayKey();
 
   useEffect(() => {
     if (!db) {
@@ -36,6 +38,7 @@ export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
         plans,
         subscribers: nextSubscribers,
         subscriptions: nextSubscribers.flatMap((subscriber) => subscriber.subscriptions),
+        today: new Date(`${localDayKey}T12:00:00`),
       });
 
       setSubscribers(nextSubscribers);
@@ -44,7 +47,7 @@ export function useSubscriberSummaries(filterStatus?: SubscriptionStatus) {
     });
 
     return () => subscription.unsubscribe();
-  }, [activeOrganizationId, db]);
+  }, [activeOrganizationId, db, localDayKey]);
 
   const filteredSummaries = useMemo(
     () =>

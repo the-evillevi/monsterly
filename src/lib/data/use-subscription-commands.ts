@@ -3,8 +3,10 @@ import { useCallback, useContext } from 'react';
 import { DataLayerContext } from './data-layer-context';
 import {
   archiveSubscription,
+  recordRenewal,
   renewSubscription,
   type RenewSubscriptionInput,
+  type SaveRenewalInput,
   saveSubscription,
   type SaveSubscriptionInput,
 } from './subscriptions.commands';
@@ -19,6 +21,21 @@ export function useSaveSubscription() {
       }
 
       return saveSubscription({ activeOrganizationId, db }, input);
+    },
+    [activeOrganizationId, db],
+  );
+}
+
+export function useRecordRenewal() {
+  const { activeOrganizationId, db } = useContext(DataLayerContext);
+
+  return useCallback(
+    async (input: SaveRenewalInput) => {
+      if (!db) {
+        throw new Error('Local database is not ready yet.');
+      }
+
+      return recordRenewal({ activeOrganizationId, db }, input);
     },
     [activeOrganizationId, db],
   );

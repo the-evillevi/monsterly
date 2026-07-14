@@ -2,6 +2,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 
 import { combineLatest } from 'rxjs';
 
+import { useLocalDayKey } from '@/hooks/use-local-day-key';
 import { buildGhosts, type GhostRecord, type GhostSource } from '@/lib/domain/ghosts';
 import {
   buildSubscriberSummaries,
@@ -77,6 +78,7 @@ export function useGhosts() {
   const { activeOrganizationId, db } = useContext(DataLayerContext);
   const [ghosts, setGhosts] = useState<GhostRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const localDayKey = useLocalDayKey();
 
   useEffect(() => {
     if (!db) {
@@ -96,6 +98,7 @@ export function useGhosts() {
         plans,
         subscribers,
         subscriptions: subscribers.flatMap((subscriber) => subscriber.subscriptions),
+        today: new Date(`${localDayKey}T12:00:00`),
       });
 
       // check_ins arrive newest-first, so the first per subscriber is the latest.
@@ -107,13 +110,16 @@ export function useGhosts() {
       }
 
       setGhosts(
-        buildGhosts(buildGhostSources(subscribers, summaries, latestCheckInBySubscriber, renewals)),
+        buildGhosts(
+          buildGhostSources(subscribers, summaries, latestCheckInBySubscriber, renewals),
+          new Date(`${localDayKey}T12:00:00`),
+        ),
       );
       setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [activeOrganizationId, db]);
+  }, [activeOrganizationId, db, localDayKey]);
 
   return useMemo(() => ({ ghosts, isLoading }), [ghosts, isLoading]);
 }

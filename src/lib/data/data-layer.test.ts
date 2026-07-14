@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 import { filter, firstValueFrom, take, timeout } from 'rxjs';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   closeMonsterlyDatabase,
@@ -561,6 +561,52 @@ describe('RxDB data layer', () => {
         previous_paid_until_date: '2026-07-20',
         subscription_id: 'subscription-1',
       },
+    ]);
+  });
+
+  it('retries a failed renewal audit without extending the subscription twice', async () => {
+    const context = await createTestContext('organization-1');
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await saveSubscription(context, {
+      billing_period: 'monthly',
+      id: 'subscription-1',
+      kind: 'gym',
+      paid_until_date: '2026-07-20',
+      start_date: '2026-07-01',
+      subscriber_id: 'subscriber-1',
+    });
+
+    const insert = context.db.renewals.insert.bind(context.db.renewals);
+    vi.spyOn(context.db.renewals, 'insert')
+      .mockRejectedValueOnce(new Error('simulated audit failure'))
+      .mockImplementation((document) => insert(document));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const result = await renewSubscription(context, {
+      billing_period: 'monthly',
+      payment_method: 'card',
+      subscription_id: 'subscription-1',
+      today: new Date(2026, 6, 4),
+    });
+
+    expect(result.status).toBe('audit-pending');
+    if (result.status !== 'audit-pending') {
+      throw new Error('Expected an audit-pending renewal result.');
+    }
+
+    await expect(listSubscriptions(context)).resolves.toMatchObject([
+      { paid_until_date: '2026-08-20' },
+    ]);
+    await expect(listRenewals(context)).resolves.toEqual([]);
+
+    await recordRenewal(context, result.pendingRenewal);
+    await recordRenewal(context, result.pendingRenewal);
+
+    await expect(listSubscriptions(context)).resolves.toMatchObject([
+      { paid_until_date: '2026-08-20' },
+    ]);
+    await expect(listRenewals(context)).resolves.toMatchObject([
+      { payment_method: 'card', previous_paid_until_date: '2026-07-20' },
     ]);
   });
 

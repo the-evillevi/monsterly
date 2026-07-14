@@ -124,7 +124,22 @@ export type RenewSubscriptionInput = {
   today?: Date;
 };
 
-export async function renewSubscription(context: DataModuleContext, input: RenewSubscriptionInput) {
+export type RenewSubscriptionResult =
+  | {
+      renewal: RenewalDocument;
+      status: 'complete';
+      subscription: SubscriptionDocument;
+    }
+  | {
+      pendingRenewal: SaveRenewalInput;
+      status: 'audit-pending';
+      subscription: SubscriptionDocument;
+    };
+
+export async function renewSubscription(
+  context: DataModuleContext,
+  input: RenewSubscriptionInput,
+): Promise<RenewSubscriptionResult> {
   const { activeOrganizationId, db } = context;
   const subscriptionDocument = await db.subscriptions
     .findOne({
@@ -159,21 +174,25 @@ export async function renewSubscription(context: DataModuleContext, input: Renew
     subscriber_id: subscription.subscriber_id,
   });
 
-  try {
-    await recordRenewal(context, {
-      id: newEntityId(),
-      new_paid_until_date: newPaidUntilDate,
-      payment_method: input.payment_method,
-      previous_paid_until_date: subscription.paid_until_date,
-      subscription_id: subscription.id,
-    });
-  } catch (renewalError) {
-    // The subscription is already renewed; failing here would make the UI
-    // report an error and invite a retry that extends the period twice.
-    console.error('Failed to record the renewal history entry.', renewalError);
-  }
+  const pendingRenewal: SaveRenewalInput = {
+    id: newEntityId(),
+    new_paid_until_date: newPaidUntilDate,
+    payment_method: input.payment_method,
+    previous_paid_until_date: subscription.paid_until_date,
+    subscription_id: subscription.id,
+  };
 
-  return updated;
+  try {
+    const renewal = await recordRenewal(context, pendingRenewal);
+
+    return { renewal, status: 'complete', subscription: updated };
+  } catch (renewalError) {
+    console.error('Failed to record the renewal history entry.', renewalError);
+
+    // The membership extension already succeeded. Return the exact audit input
+    // so the UI can retry only this idempotent write without extending twice.
+    return { pendingRenewal, status: 'audit-pending', subscription: updated };
+  }
 }
 
 export async function archiveSubscription(
@@ -210,17 +229,42 @@ export async function recordRenewal(
   input: SaveRenewalInput,
 ) {
   const now = new Date().toISOString();
-  const subscription = await db.subscriptions
-    .findOne({
-      selector: {
-        ...activeRecordSelector(activeOrganizationId),
-        id: input.subscription_id,
-      },
-    })
-    .exec();
+  const [subscription, existing] = await Promise.all([
+    db.subscriptions
+      .findOne({
+        selector: {
+          ...activeRecordSelector(activeOrganizationId),
+          id: input.subscription_id,
+        },
+      })
+      .exec(),
+    db.renewals
+      .findOne({
+        selector: {
+          id: input.id,
+          organization_id: activeOrganizationId,
+        },
+      })
+      .exec(),
+  ]);
 
   if (!subscription) {
     throw new Error('Subscription must belong to the active organization.');
+  }
+
+  if (existing) {
+    const renewal = existing.toJSON();
+    const matchesRetry =
+      renewal.subscription_id === input.subscription_id &&
+      renewal.previous_paid_until_date === input.previous_paid_until_date &&
+      renewal.new_paid_until_date === input.new_paid_until_date &&
+      renewal.payment_method === (input.payment_method ?? null);
+
+    if (!matchesRetry) {
+      throw new Error('Renewal id already belongs to a different audit entry.');
+    }
+
+    return renewal;
   }
 
   const renewal: RenewalDocument = {

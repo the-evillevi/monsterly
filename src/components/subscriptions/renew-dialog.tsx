@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useRenewSubscription } from '@/lib/data/use-subscription-commands';
+import type { SaveRenewalInput } from '@/lib/data/subscriptions.commands';
+import { useRecordRenewal, useRenewSubscription } from '@/lib/data/use-subscription-commands';
 import { isValidCustomDays, nextPaidUntilDate } from '@/lib/domain/billing-period';
 import { formatDateOnlyLabel } from '@/lib/domain/date-only';
 import { paymentMethodLabels } from '@/lib/domain/payment-method';
@@ -40,6 +41,7 @@ function planLabel(subscription: SubscriptionDocument) {
 
 export function RenewDialog({ defaultSubscriptionId, subscriptions, trigger }: RenewDialogProps) {
   const renew = useRenewSubscription();
+  const recordRenewal = useRecordRenewal();
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
@@ -47,6 +49,7 @@ export function RenewDialog({ defaultSubscriptionId, subscriptions, trigger }: R
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [isRenewing, setIsRenewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingAudit, setPendingAudit] = useState<SaveRenewalInput | null>(null);
 
   const canPick = subscriptions.length > 1 && !defaultSubscriptionId;
   const selected = subscriptions.find((subscription) => subscription.id === selectedId) ?? null;
@@ -60,7 +63,7 @@ export function RenewDialog({ defaultSubscriptionId, subscriptions, trigger }: R
   function handleOpenChange(next: boolean) {
     setOpen(next);
 
-    if (next) {
+    if (next && !pendingAudit) {
       setError(null);
       setPaymentMethod('cash');
       const initial =
@@ -91,16 +94,45 @@ export function RenewDialog({ defaultSubscriptionId, subscriptions, trigger }: R
     setIsRenewing(true);
 
     try {
-      await renew({
+      const result = await renew({
         billing_period: billingPeriod,
         custom_days: customDayCount,
         payment_method: paymentMethod,
         subscription_id: selected.id,
       });
+
+      if (result.status === 'audit-pending') {
+        setPendingAudit(result.pendingRenewal);
+        setError(
+          'La membresía se renovó, pero falta registrar el método de pago. Reintenta el registro sin volver a renovar.',
+        );
+        return;
+      }
+
       handleOpenChange(false);
     } catch (renewError) {
       console.error('Failed to renew the subscription.', renewError);
       setError('No se pudo renovar. Intenta de nuevo.');
+    } finally {
+      setIsRenewing(false);
+    }
+  }
+
+  async function handleAuditRetry() {
+    if (!pendingAudit) {
+      return;
+    }
+
+    setError(null);
+    setIsRenewing(true);
+
+    try {
+      await recordRenewal(pendingAudit);
+      setPendingAudit(null);
+      handleOpenChange(false);
+    } catch (auditError) {
+      console.error('Failed to retry the renewal audit entry.', auditError);
+      setError('La membresía ya está renovada, pero el registro del pago sigue pendiente.');
     } finally {
       setIsRenewing(false);
     }
@@ -219,13 +251,19 @@ export function RenewDialog({ defaultSubscriptionId, subscriptions, trigger }: R
         )}
 
         <DialogFooter>
-          <Button
-            disabled={!selected || isRenewing || !newPaidUntilDate}
-            onClick={handleConfirm}
-            type="button"
-          >
-            Confirmar renovación
-          </Button>
+          {pendingAudit ? (
+            <Button disabled={isRenewing} onClick={handleAuditRetry} type="button">
+              Reintentar registro
+            </Button>
+          ) : (
+            <Button
+              disabled={!selected || isRenewing || !newPaidUntilDate}
+              onClick={handleConfirm}
+              type="button"
+            >
+              Confirmar renovación
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
