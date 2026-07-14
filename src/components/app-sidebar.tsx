@@ -1,4 +1,4 @@
-import { CircleAlert, Clock, LayoutDashboard, Settings, Users } from 'lucide-react';
+import { LayoutDashboard, ScanLine, Settings, Users } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 import { SyncStatus } from '@/components/sync-status';
@@ -19,10 +19,9 @@ import {
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Users, label: 'Subscribers', path: '/subscribers' },
-  { icon: CircleAlert, label: 'Vencidos', path: '/vencidos' },
-  { icon: Clock, label: 'Por vencer', path: '/por-vencer' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: ScanLine, label: 'Check-in', path: '/check-in' },
+  { icon: Users, label: 'Suscriptores', path: '/subscribers' },
+  { icon: Settings, label: 'Ajustes', path: '/settings' },
 ];
 
 export function AppSidebar() {

@@ -5,6 +5,7 @@ import { PageFrame } from '@/components/page-frame';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { SubscriberList } from '@/components/subscribers/subscriber-list';
 import { UpdatePrompt } from '@/components/update-prompt';
+import { CheckInPage } from '@/pages/check-in-page';
 import { DashboardPage } from '@/pages/dashboard-page';
 import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
 import { EditSubscriptionPage } from '@/pages/edit-subscription-page';
@@ -44,6 +45,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/check-in" element={<CheckInPage />} />
             <Route path="/subscribers" element={<SubscribersPage />} />
             <Route path="/subscribers/new" element={<NewSubscriberPage />} />
             <Route path="/subscribers/:slug/edit" element={<EditSubscriberPage />} />

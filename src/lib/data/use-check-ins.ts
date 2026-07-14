@@ -18,6 +18,7 @@ export type CheckInFeedItem = {
   checkedInAt: string;
   id: string;
   subscriber?: SubscriberSummary;
+  subscriberId: string;
 };
 
 /**
@@ -69,6 +70,7 @@ export function useCheckIns() {
         checkedInAt: checkIn.checked_in_at,
         id: checkIn.id,
         subscriber: summariesById.get(checkIn.subscriber_id),
+        subscriberId: checkIn.subscriber_id,
       })),
     [checkIns, summariesById],
   );
