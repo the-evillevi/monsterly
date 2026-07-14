@@ -1,41 +1,75 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+
+import { CheckInFeed } from '@/components/dashboard/check-in-feed';
+import { StatTile, type StatTone } from '@/components/dashboard/stat-tile';
 import { PageFrame } from '@/components/page-frame';
+import { Button } from '@/components/ui/button';
+import { useCheckIns } from '@/lib/data/use-check-ins';
+import { useGhosts } from '@/lib/data/use-ghosts';
 import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
+
+const FEED_LIMIT = 10;
 
 export function DashboardPage() {
   const { summaries } = useSubscriberSummaries();
-  const metrics = [
+  const { ghosts } = useGhosts();
+  const { items, uniqueTodayCount } = useCheckIns();
+
+  const countByStatus = (status: string) =>
+    summaries.filter((summary) => summary.status === status).length;
+
+  const tiles: { label: string; to: string; tone: StatTone; value: number }[] = [
     {
       label: 'Al corriente',
+      to: '/subscribers?tab=al-corriente',
       tone: 'success',
-      value: summaries.filter((summary) => summary.status === 'Al corriente').length.toString(),
+      value: countByStatus('Al corriente'),
     },
     {
       label: 'Por vencer',
+      to: '/subscribers?tab=por-vencer',
       tone: 'warning',
-      value: summaries.filter((summary) => summary.status === 'Por vencer').length.toString(),
+      value: countByStatus('Por vencer'),
     },
     {
       label: 'Vencidos',
+      to: '/subscribers?tab=vencidos',
       tone: 'destructive',
-      value: summaries.filter((summary) => summary.status === 'Vencido').length.toString(),
+      value: countByStatus('Vencido'),
     },
-  ] as const;
+    { label: 'Visitas hoy', to: '/check-in', tone: 'primary', value: uniqueTodayCount },
+    {
+      label: 'Fantasmas',
+      to: '/subscribers?tab=fantasmas',
+      tone: 'muted',
+      value: ghosts.length,
+    },
+  ];
 
   return (
-    <PageFrame title="Dashboard" subtitle="Fast payment status at a glance.">
-      <section className="grid gap-4 md:grid-cols-3" aria-label="Subscription status summary">
-        {metrics.map((metric) => (
-          <Card className="border-t-6" data-tone={metric.tone} key={metric.label}>
-            <CardHeader>
-              <CardTitle className="text-base text-muted-foreground">{metric.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <strong className="text-5xl leading-none text-foreground">{metric.value}</strong>
-            </CardContent>
-          </Card>
+    <PageFrame title="Dashboard" subtitle="El pulso operativo de tu gimnasio de un vistazo.">
+      <div>
+        <Button asChild>
+          <Link to="/check-in">Registrar visita</Link>
+        </Button>
+      </div>
+
+      <section
+        aria-label="Resumen del gimnasio"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
+      >
+        {tiles.map((tile) => (
+          <StatTile
+            key={tile.label}
+            label={tile.label}
+            to={tile.to}
+            tone={tile.tone}
+            value={tile.value}
+          />
         ))}
       </section>
+
+      <CheckInFeed items={items.slice(0, FEED_LIMIT)} />
     </PageFrame>
   );
 }
