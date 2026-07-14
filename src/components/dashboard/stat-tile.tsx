@@ -1,17 +1,8 @@
 import { Link } from 'react-router-dom';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 
 export type StatTone = 'destructive' | 'muted' | 'primary' | 'success' | 'warning';
-
-const toneBorder: Record<StatTone, string> = {
-  destructive: 'border-t-destructive',
-  muted: 'border-t-muted-foreground',
-  primary: 'border-t-primary',
-  success: 'border-t-success',
-  warning: 'border-t-warning',
-};
 
 type StatTileProps = {
   label: string;
@@ -26,12 +17,16 @@ export function StatTile({ label, to, tone, value }: StatTileProps) {
       className="rounded-lg outline-none ring-ring transition-colors focus-visible:ring-2"
       to={to}
     >
-      <Card className={cn('h-full border-t-6 transition-shadow hover:shadow-md', toneBorder[tone])}>
+      <Card className="h-full gap-2 border-t-4 transition-shadow hover:shadow-md" data-tone={tone}>
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+          <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <strong className="text-4xl leading-none text-foreground">{value}</strong>
+          <strong className="text-4xl font-black leading-none tabular-nums tracking-tight text-foreground">
+            {value}
+          </strong>
         </CardContent>
       </Card>
     </Link>

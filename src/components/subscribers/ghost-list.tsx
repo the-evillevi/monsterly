@@ -54,7 +54,9 @@ export function GhostList({ ghosts }: GhostListProps) {
                 </div>
               </div>
               <div className="grid gap-2 sm:justify-items-end">
-                <Badge variant="warning">{ghost.daysMissing} días sin venir</Badge>
+                <Badge className="tabular-nums" variant="warning">
+                  {ghost.daysMissing} días sin venir
+                </Badge>
                 <span className="text-sm text-muted-foreground">{lastSeenLabel(ghost)}</span>
                 {ghost.slug ? (
                   <Button asChild size="sm" variant="ghost">

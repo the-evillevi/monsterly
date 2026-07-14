@@ -108,13 +108,15 @@ export function SubscribersPage() {
   }
 
   return (
-    <PageFrame title="Suscriptores" subtitle="Controla el estatus de pago de tus miembros.">
-      <div>
+    <PageFrame
+      title="Suscriptores"
+      subtitle="Controla el estatus de pago de tus miembros."
+      actions={
         <Button asChild>
           <Link to="/subscribers/new">Agregar suscriptor</Link>
         </Button>
-      </div>
-
+      }
+    >
       <SubscriberFilters
         disciplines={disciplines}
         onDisciplinesChange={setDisciplines}
@@ -128,7 +130,9 @@ export function SubscribersPage() {
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.dot ? <span aria-hidden className={cn('size-2 rounded-full', tab.dot)} /> : null}
               {tab.label}
-              <span className="text-xs text-muted-foreground">{counts[tab.value]}</span>
+              <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                {counts[tab.value]}
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>

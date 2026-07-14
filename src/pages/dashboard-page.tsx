@@ -47,13 +47,15 @@ export function DashboardPage() {
   ];
 
   return (
-    <PageFrame title="Dashboard" subtitle="El pulso operativo de tu gimnasio de un vistazo.">
-      <div>
+    <PageFrame
+      title="Dashboard"
+      subtitle="El pulso operativo de tu gimnasio de un vistazo."
+      actions={
         <Button asChild>
           <Link to="/check-in">Registrar visita</Link>
         </Button>
-      </div>
-
+      }
+    >
       <section
         aria-label="Resumen del gimnasio"
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"

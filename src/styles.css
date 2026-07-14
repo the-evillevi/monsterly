@@ -104,6 +104,7 @@ select {
   font: inherit;
 }
 
+/* Traffic-light accent for stat tiles: colored top rule keyed by tone. */
 [data-tone='success'] {
   border-top-color: var(--success);
 }
@@ -114,6 +115,14 @@ select {
 
 [data-tone='destructive'] {
   border-top-color: var(--destructive);
+}
+
+[data-tone='primary'] {
+  border-top-color: var(--primary);
+}
+
+[data-tone='muted'] {
+  border-top-color: var(--muted-foreground);
 }
 
 .dark {

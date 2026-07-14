@@ -87,7 +87,7 @@ export function CheckInTerminal() {
             aria-label="Código de acceso"
             autoComplete="off"
             autoFocus
-            className="h-12 text-lg"
+            className="h-12 text-lg tabular-nums tracking-[0.2em]"
             id="check-in-code"
             inputMode="numeric"
             onChange={(event) => setCode(event.target.value)}
