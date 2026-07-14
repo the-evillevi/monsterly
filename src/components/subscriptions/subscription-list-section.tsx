@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-import { RenewSubscriptionControl } from '@/components/subscriptions/renew-subscription-control';
+import { RenewDialog } from '@/components/subscriptions/renew-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -70,7 +70,7 @@ export function SubscriptionListSection({
                   </div>
                 </dl>
                 <div className="flex flex-wrap items-center gap-2">
-                  <RenewSubscriptionControl subscription={subscription} />
+                  <RenewDialog subscriptions={[subscription]} />
                   <Button asChild size="sm" variant="secondary">
                     <Link
                       aria-label={`Editar suscripción ${subscriptionKindLabels[subscription.kind]} pagada hasta ${formatDateOnlyLabel(subscription.paid_until_date)}`}
