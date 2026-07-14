@@ -157,7 +157,7 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
     event.preventDefault();
     const trimmed = query.trim();
     const digits = trimmed.replace(/\D/g, '');
-    let exactPin =
+    const exactPin =
       digits.length === 6 ? summaries.find((summary) => summary.checkInCode === digits) : undefined;
 
     if (!exactPin && digits.length === 6) {
