@@ -14,6 +14,8 @@ grant usage on schema public to anon;
 grant select, insert, update on public.subscribers to anon;
 grant select, insert, update on public.subscriptions to anon;
 grant select, insert, update on public.renewals to anon;
+grant select, insert, update on public.plans to anon;
+grant select, insert, update on public.check_ins to anon;
 
 drop policy if exists "Local dev anon can read subscribers" on public.subscribers;
 create policy "Local dev anon can read subscribers"
@@ -50,6 +52,30 @@ on public.renewals for insert to anon with check (true);
 drop policy if exists "Local dev anon can update renewals" on public.renewals;
 create policy "Local dev anon can update renewals"
 on public.renewals for update to anon using (true) with check (true);
+
+drop policy if exists "Local dev anon can read plans" on public.plans;
+create policy "Local dev anon can read plans"
+on public.plans for select to anon using (true);
+
+drop policy if exists "Local dev anon can write plans" on public.plans;
+create policy "Local dev anon can write plans"
+on public.plans for insert to anon with check (true);
+
+drop policy if exists "Local dev anon can update plans" on public.plans;
+create policy "Local dev anon can update plans"
+on public.plans for update to anon using (true) with check (true);
+
+drop policy if exists "Local dev anon can read check_ins" on public.check_ins;
+create policy "Local dev anon can read check_ins"
+on public.check_ins for select to anon using (true);
+
+drop policy if exists "Local dev anon can write check_ins" on public.check_ins;
+create policy "Local dev anon can write check_ins"
+on public.check_ins for insert to anon with check (true);
+
+drop policy if exists "Local dev anon can update check_ins" on public.check_ins;
+create policy "Local dev anon can update check_ins"
+on public.check_ins for update to anon using (true) with check (true);
 
 insert into public.organizations (id, name)
 values

@@ -51,6 +51,12 @@ export const planFacilities = ['dragonz', 'monsters'] as const;
 
 export type PlanFacility = (typeof planFacilities)[number];
 
+// How a manual renewal was paid at the front desk. Optional: legacy renewal
+// rows predate the field.
+export const paymentMethods = ['cash', 'card', 'transfer'] as const;
+
+export type PaymentMethod = (typeof paymentMethods)[number];
+
 export const planSchemaLiteral = {
   title: 'plan schema',
   version: 0,
@@ -182,7 +188,7 @@ export const subscriptionSchemaLiteral = {
 
 export const renewalSchemaLiteral = {
   title: 'renewal schema',
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   additionalProperties: false,
@@ -192,6 +198,7 @@ export const renewalSchemaLiteral = {
     subscription_id: { type: 'string', maxLength: 100 },
     previous_paid_until_date: dateSchema,
     new_paid_until_date: dateSchema,
+    payment_method: { type: ['string', 'null'], maxLength: 20 },
     created_at: timestampSchema,
     updated_at: timestampSchema,
     deleted_at: optionalTimestampSchema,
@@ -212,6 +219,42 @@ export const renewalSchemaLiteral = {
   indexes: [
     ['organization_id', 'created_at'],
     ['organization_id', 'subscription_id'],
+    ['organization_id', 'updated_at'],
+  ],
+} as const;
+
+export const checkInSchemaLiteral = {
+  title: 'check-in schema',
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    organization_id: { type: 'string', maxLength: 100 },
+    subscriber_id: { type: 'string', maxLength: 100 },
+    // Full ISO timestamp: UTC ISO strings sort lexicographically, so range
+    // queries ("since local midnight") work with plain string comparison.
+    checked_in_at: timestampSchema,
+    created_at: timestampSchema,
+    updated_at: timestampSchema,
+    deleted_at: optionalTimestampSchema,
+    _deleted: { type: 'boolean' },
+    _modified: timestampSchema,
+  },
+  required: [
+    'id',
+    'organization_id',
+    'subscriber_id',
+    'checked_in_at',
+    'created_at',
+    'updated_at',
+    '_deleted',
+    '_modified',
+  ],
+  indexes: [
+    ['organization_id', 'checked_in_at'],
+    ['organization_id', 'subscriber_id'],
     ['organization_id', 'updated_at'],
   ],
 } as const;
@@ -275,8 +318,21 @@ export type RenewalDocument = {
   id: string;
   new_paid_until_date: string;
   organization_id: string;
+  payment_method?: PaymentMethod | null;
   previous_paid_until_date: string;
   subscription_id: string;
+  updated_at: string;
+};
+
+export type CheckInDocument = {
+  _deleted: boolean;
+  _modified: string;
+  checked_in_at: string;
+  created_at: string;
+  deleted_at?: string | null;
+  id: string;
+  organization_id: string;
+  subscriber_id: string;
   updated_at: string;
 };
 
@@ -284,8 +340,10 @@ export const subscriberSchema: RxJsonSchema<SubscriberDocument> = subscriberSche
 export const subscriptionSchema: RxJsonSchema<SubscriptionDocument> = subscriptionSchemaLiteral;
 export const renewalSchema: RxJsonSchema<RenewalDocument> = renewalSchemaLiteral;
 export const planSchema: RxJsonSchema<PlanDocument> = planSchemaLiteral;
+export const checkInSchema: RxJsonSchema<CheckInDocument> = checkInSchemaLiteral;
 
 export type MonsterlyCollections = {
+  check_ins: RxCollection<CheckInDocument>;
   plans: RxCollection<PlanDocument>;
   renewals: RxCollection<RenewalDocument>;
   subscribers: RxCollection<SubscriberDocument>;
@@ -332,11 +390,19 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
   });
 
   await database.addCollections({
+    check_ins: {
+      schema: checkInSchema,
+    },
     plans: {
       schema: planSchema,
     },
     renewals: {
       schema: renewalSchema,
+      migrationStrategies: {
+        // v0 -> v1 adds the optional payment_method field; legacy rows stay
+        // null and upgrade in place untouched.
+        1: (oldDocument) => oldDocument,
+      },
     },
     subscribers: {
       schema: subscriberSchema,

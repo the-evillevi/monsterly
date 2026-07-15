@@ -1,167 +1,53 @@
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageFrame } from '@/components/page-frame';
-import { SubscriberList } from '@/components/subscribers/subscriber-list';
-import { SyncStatus } from '@/components/sync-status';
+import { AppSidebar } from '@/components/app-sidebar';
+import { LegacyCheckInRedirect } from '@/components/check-ins/legacy-check-in-redirect';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { UpdatePrompt } from '@/components/update-prompt';
+import { DashboardPage } from '@/pages/dashboard-page';
 import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
-import { NewSubscriberPage } from '@/pages/new-subscriber-page';
 import { EditSubscriptionPage } from '@/pages/edit-subscription-page';
+import { NewSubscriberPage } from '@/pages/new-subscriber-page';
 import { NewSubscriptionPage } from '@/pages/new-subscription-page';
-import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
-import { cn } from '@/lib/utils';
-
-const navItems = [
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Subscribers', path: '/subscribers' },
-  { label: 'Vencidos', path: '/vencidos' },
-  { label: 'Por vencer', path: '/por-vencer' },
-  { label: 'Settings', path: '/settings' },
-];
-
-function DashboardPage() {
-  const { summaries } = useSubscriberSummaries();
-  const metrics = [
-    {
-      label: 'Al corriente',
-      tone: 'success',
-      value: summaries.filter((summary) => summary.status === 'Al corriente').length.toString(),
-    },
-    {
-      label: 'Por vencer',
-      tone: 'warning',
-      value: summaries.filter((summary) => summary.status === 'Por vencer').length.toString(),
-    },
-    {
-      label: 'Vencidos',
-      tone: 'destructive',
-      value: summaries.filter((summary) => summary.status === 'Vencido').length.toString(),
-    },
-  ] as const;
-
-  return (
-    <PageFrame title="Dashboard" subtitle="Fast payment status at a glance.">
-      <section className="grid gap-4 md:grid-cols-3" aria-label="Subscription status summary">
-        {metrics.map((metric) => (
-          <Card className="border-t-6" data-tone={metric.tone} key={metric.label}>
-            <CardHeader>
-              <CardTitle className="text-base text-muted-foreground">{metric.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <strong className="text-5xl leading-none text-foreground">{metric.value}</strong>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-    </PageFrame>
-  );
-}
-
-function SubscribersPage() {
-  return (
-    <PageFrame title="Subscribers" subtitle="Manage active gym and CrossFit members.">
-      <div>
-        <Button asChild>
-          <Link to="/subscribers/new">Agregar suscriptor</Link>
-        </Button>
-      </div>
-      <SubscriberList />
-    </PageFrame>
-  );
-}
-
-function VencidosPage() {
-  return (
-    <PageFrame title="Vencidos" subtitle="Members who already need payment follow-up.">
-      <SubscriberList filterStatus="Vencido" />
-    </PageFrame>
-  );
-}
-
-function PorVencerPage() {
-  return (
-    <PageFrame title="Por vencer" subtitle="Subscriptions expiring inside the warning window.">
-      <SubscriberList filterStatus="Por vencer" />
-    </PageFrame>
-  );
-}
-
-function SettingsPage() {
-  return (
-    <PageFrame title="Settings" subtitle="Configure the defaults Monsterly will use.">
-      <div className="grid max-w-3xl gap-3">
-        {[
-          ['Warning window', '3 days before expiration'],
-          ['Primary subscription types', 'Gym and CrossFit'],
-          ['Data mode', 'Offline-first'],
-        ].map(([term, description]) => (
-          <Card className="p-4" key={term}>
-            <dl className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-              <dt className="font-bold text-foreground">{term}</dt>
-              <dd className="text-muted-foreground">{description}</dd>
-            </dl>
-          </Card>
-        ))}
-      </div>
-    </PageFrame>
-  );
-}
+import { SettingsPage } from '@/pages/settings-page';
+import { SubscribersPage } from '@/pages/subscribers-page';
 
 function App() {
   return (
-    <div className="grid min-h-screen md:grid-cols-[15.5rem_minmax(0,1fr)]">
-      <aside className="border-b bg-card p-4 md:sticky md:top-0 md:h-screen md:border-r md:border-b-0 md:p-5">
-        <div className="grid gap-4 md:gap-8">
-          <NavLink
-            className="text-xl font-black text-foreground"
-            to="/dashboard"
-            aria-label="Monsterly dashboard"
-          >
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+          <SidebarTrigger />
+          <NavLink className="font-black md:hidden" to="/dashboard">
             Monsterly
           </NavLink>
-          <SyncStatus />
-          <nav className="flex gap-2 overflow-x-auto pb-1 md:grid md:overflow-visible md:pb-0">
-            {navItems.map((item) => (
-              <NavLink
-                className={({ isActive }) =>
-                  cn(
-                    'min-h-11 shrink-0 rounded-md px-3 py-2 font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground',
-                    isActive && 'bg-secondary text-foreground',
-                  )
-                }
-                key={item.path}
-                to={item.path}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+        </header>
+        <div className="w-full max-w-6xl p-4 sm:p-6 lg:p-10">
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/check-in" element={<LegacyCheckInRedirect />} />
+            <Route path="/subscribers" element={<SubscribersPage />} />
+            <Route path="/subscribers/new" element={<NewSubscriberPage />} />
+            <Route path="/subscribers/:slug/edit" element={<EditSubscriberPage />} />
+            <Route path="/subscribers/:slug/subscriptions/new" element={<NewSubscriptionPage />} />
+            <Route
+              path="/subscribers/:slug/subscriptions/:subscriptionId/edit"
+              element={<EditSubscriptionPage />}
+            />
+            <Route path="/vencidos" element={<Navigate to="/subscribers?tab=vencidos" replace />} />
+            <Route
+              path="/por-vencer"
+              element={<Navigate to="/subscribers?tab=por-vencer" replace />}
+            />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
         </div>
-      </aside>
-
-      <main className="w-full max-w-6xl p-4 sm:p-6 lg:p-10">
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/subscribers" element={<SubscribersPage />} />
-          <Route path="/subscribers/new" element={<NewSubscriberPage />} />
-          <Route path="/subscribers/:slug/edit" element={<EditSubscriberPage />} />
-          <Route path="/subscribers/:slug/subscriptions/new" element={<NewSubscriptionPage />} />
-          <Route
-            path="/subscribers/:slug/subscriptions/:subscriptionId/edit"
-            element={<EditSubscriptionPage />}
-          />
-          <Route path="/vencidos" element={<VencidosPage />} />
-          <Route path="/por-vencer" element={<PorVencerPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </main>
-
-      <UpdatePrompt />
-    </div>
+        <UpdatePrompt />
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

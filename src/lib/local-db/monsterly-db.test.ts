@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   closeMonsterlyDatabase,
   getMonsterlyDatabase,
+  renewalSchema,
   subscriberSchema,
   subscriptionSchema,
   type MonsterlyCollections,
@@ -228,6 +229,89 @@ describe('Monsterly local RxDB database', () => {
       expect(migrated?.name).toBe('Mariana Soto');
       expect(migrated?.slug).toBeFalsy();
       expect(migrated?.check_in_code).toBeFalsy();
+    } finally {
+      await v1Database.remove();
+    }
+  });
+
+  it('migrates v0 renewal documents to v1 without requiring a payment method', async () => {
+    const databaseName = 'monsterly-renewal-migration-test';
+    const timestamp = { type: 'string', format: 'date-time', maxLength: 32 } as const;
+    const date = { type: 'string', format: 'date', maxLength: 10 } as const;
+    const renewalSchemaV0 = {
+      title: 'renewal schema',
+      version: 0,
+      primaryKey: 'id',
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', maxLength: 100 },
+        organization_id: { type: 'string', maxLength: 100 },
+        subscription_id: { type: 'string', maxLength: 100 },
+        previous_paid_until_date: date,
+        new_paid_until_date: date,
+        created_at: timestamp,
+        updated_at: timestamp,
+        deleted_at: { anyOf: [timestamp, { type: 'null' }] },
+        _deleted: { type: 'boolean' },
+        _modified: timestamp,
+      },
+      required: [
+        'id',
+        'organization_id',
+        'subscription_id',
+        'previous_paid_until_date',
+        'new_paid_until_date',
+        'created_at',
+        'updated_at',
+        '_deleted',
+        '_modified',
+      ],
+      indexes: [
+        ['organization_id', 'created_at'],
+        ['organization_id', 'subscription_id'],
+        ['organization_id', 'updated_at'],
+      ],
+    } as const;
+
+    const v0Database = await createRxDatabase<Pick<MonsterlyCollections, 'renewals'>>({
+      name: databaseName,
+      storage: getRxStorageDexie(),
+      multiInstance: false,
+    });
+
+    await v0Database.addCollections({ renewals: { schema: renewalSchemaV0 } });
+    await v0Database.renewals.insert({
+      _deleted: false,
+      _modified: '2026-07-01T00:00:00.000Z',
+      created_at: '2026-07-01T00:00:00.000Z',
+      id: 'legacy-renewal',
+      new_paid_until_date: '2026-08-01',
+      organization_id: 'organization-1',
+      previous_paid_until_date: '2026-07-01',
+      subscription_id: 'subscription-1',
+      updated_at: '2026-07-01T00:00:00.000Z',
+    });
+    await v0Database.close();
+
+    const v1Database = await createRxDatabase<Pick<MonsterlyCollections, 'renewals'>>({
+      name: databaseName,
+      storage: getRxStorageDexie(),
+      multiInstance: false,
+    });
+
+    try {
+      await v1Database.addCollections({
+        renewals: {
+          schema: renewalSchema,
+          migrationStrategies: { 1: (oldDocument) => oldDocument },
+        },
+      });
+
+      const migrated = await v1Database.renewals.findOne('legacy-renewal').exec();
+
+      expect(migrated?.new_paid_until_date).toBe('2026-08-01');
+      expect(migrated?.payment_method).toBeUndefined();
     } finally {
       await v1Database.remove();
     }

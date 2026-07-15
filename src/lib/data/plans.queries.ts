@@ -34,3 +34,15 @@ export function watchPlans(context: DataModuleContext): Observable<PlanDocument[
 export function watchActivePlans(context: DataModuleContext): Observable<PlanDocument[]> {
   return watchPlans(context).pipe(map((plans) => plans.filter((plan) => plan.active)));
 }
+
+export async function listPlans(context: DataModuleContext): Promise<PlanDocument[]> {
+  const documents = await context.db.plans
+    .find({
+      selector: {
+        ...activeRecordSelector(context.activeOrganizationId),
+      },
+    })
+    .exec();
+
+  return documents.map((document) => document.toJSON()).sort(byPriceThenName);
+}

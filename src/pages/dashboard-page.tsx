@@ -1,0 +1,71 @@
+import { CheckInFeed } from '@/components/dashboard/check-in-feed';
+import { useCheckInDialog } from '@/components/check-ins/check-in-dialog-context';
+import { StatTile, type StatTileProps } from '@/components/dashboard/stat-tile';
+import { PageFrame } from '@/components/page-frame';
+import { Button } from '@/components/ui/button';
+import { useCheckIns } from '@/lib/data/use-check-ins';
+import { useGhosts } from '@/lib/data/use-ghosts';
+import { useSubscriberSummaries } from '@/lib/data/use-subscriber-summaries';
+
+const FEED_LIMIT = 10;
+
+export function DashboardPage() {
+  const { openSearch } = useCheckInDialog();
+  const { summaries } = useSubscriberSummaries();
+  const { ghosts } = useGhosts();
+  const { items, uniqueTodayCount } = useCheckIns();
+
+  const countByStatus = (status: string) =>
+    summaries.filter((summary) => summary.status === status).length;
+
+  const tiles: StatTileProps[] = [
+    {
+      label: 'Al corriente',
+      to: '/subscribers?tab=al-corriente',
+      tone: 'success',
+      value: countByStatus('Al corriente'),
+    },
+    {
+      label: 'Por vencer',
+      to: '/subscribers?tab=por-vencer',
+      tone: 'warning',
+      value: countByStatus('Por vencer'),
+    },
+    {
+      label: 'Vencidos',
+      to: '/subscribers?tab=vencidos',
+      tone: 'destructive',
+      value: countByStatus('Vencido'),
+    },
+    { label: 'Visitas hoy', onClick: openSearch, tone: 'primary', value: uniqueTodayCount },
+    {
+      label: 'Fantasmas',
+      to: '/subscribers?tab=fantasmas',
+      tone: 'muted',
+      value: ghosts.length,
+    },
+  ];
+
+  return (
+    <PageFrame
+      title="Dashboard"
+      subtitle="El pulso operativo de tu gimnasio de un vistazo."
+      actions={
+        <Button onClick={openSearch} type="button">
+          Registrar visita
+        </Button>
+      }
+    >
+      <section
+        aria-label="Resumen del gimnasio"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
+      >
+        {tiles.map((tile) => (
+          <StatTile key={tile.label} {...tile} />
+        ))}
+      </section>
+
+      <CheckInFeed items={items.slice(0, FEED_LIMIT)} />
+    </PageFrame>
+  );
+}
