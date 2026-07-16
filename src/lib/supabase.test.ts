@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getConfiguredOrganizationId, hasSupabaseConfig } from './supabase';
+import { getConfiguredOrganizationId, hasSupabaseConfig, isAuthRequired } from './supabase';
 
 const organizationUuid = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
 
@@ -49,5 +49,37 @@ describe('Supabase configuration', () => {
     stubSupabaseEnv({ organizationId: ` ${organizationUuid.toUpperCase()} ` });
 
     expect(getConfiguredOrganizationId()).toBe(organizationUuid);
+  });
+});
+
+describe('isAuthRequired', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('requires auth by default when Supabase is configured and the mode is unset', () => {
+    stubSupabaseEnv();
+
+    expect(isAuthRequired()).toBe(true);
+  });
+
+  it('disables auth when the mode is explicitly anon (local dev)', () => {
+    stubSupabaseEnv();
+    vi.stubEnv('VITE_MONSTERLY_AUTH_MODE', 'anon');
+
+    expect(isAuthRequired()).toBe(false);
+  });
+
+  it('fails closed: any value other than anon keeps auth required', () => {
+    stubSupabaseEnv();
+    vi.stubEnv('VITE_MONSTERLY_AUTH_MODE', 'ANON');
+
+    expect(isAuthRequired()).toBe(true);
+  });
+
+  it('never requires auth without Supabase config (demo mode)', () => {
+    stubSupabaseEnv({ url: '' });
+
+    expect(isAuthRequired()).toBe(false);
   });
 });
