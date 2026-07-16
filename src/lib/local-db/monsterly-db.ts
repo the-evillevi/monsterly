@@ -57,6 +57,10 @@ export const paymentMethods = ['cash', 'card', 'transfer'] as const;
 
 export type PaymentMethod = (typeof paymentMethods)[number];
 
+export const dayVisitTypes = ['gym', 'crossfit', 'both'] as const;
+
+export type DayVisitType = (typeof dayVisitTypes)[number];
+
 export const planSchemaLiteral = {
   title: 'plan schema',
   version: 0,
@@ -259,6 +263,44 @@ export const checkInSchemaLiteral = {
   ],
 } as const;
 
+export const dayVisitSchemaLiteral = {
+  title: 'day-visit schema',
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    organization_id: { type: 'string', maxLength: 100 },
+    visit_type: { type: 'string', enum: dayVisitTypes },
+    price: { type: 'number', minimum: 0 },
+    visit_date: dateSchema,
+    subscriber_id: { type: ['string', 'null'], maxLength: 100 },
+    created_at: timestampSchema,
+    updated_at: timestampSchema,
+    deleted_at: optionalTimestampSchema,
+    _deleted: { type: 'boolean' },
+    _modified: timestampSchema,
+  },
+  required: [
+    'id',
+    'organization_id',
+    'visit_type',
+    'price',
+    'visit_date',
+    'subscriber_id',
+    'created_at',
+    'updated_at',
+    '_deleted',
+    '_modified',
+  ],
+  indexes: [
+    ['organization_id', 'visit_date'],
+    ['organization_id', 'subscriber_id'],
+    ['organization_id', 'updated_at'],
+  ],
+} as const;
+
 export type SubscriberDocument = {
   _deleted: boolean;
   _modified: string;
@@ -336,14 +378,30 @@ export type CheckInDocument = {
   updated_at: string;
 };
 
+export type DayVisitDocument = {
+  _deleted: boolean;
+  _modified: string;
+  created_at: string;
+  deleted_at?: string | null;
+  id: string;
+  organization_id: string;
+  price: number;
+  subscriber_id: string | null;
+  updated_at: string;
+  visit_date: string;
+  visit_type: DayVisitType;
+};
+
 export const subscriberSchema: RxJsonSchema<SubscriberDocument> = subscriberSchemaLiteral;
 export const subscriptionSchema: RxJsonSchema<SubscriptionDocument> = subscriptionSchemaLiteral;
 export const renewalSchema: RxJsonSchema<RenewalDocument> = renewalSchemaLiteral;
 export const planSchema: RxJsonSchema<PlanDocument> = planSchemaLiteral;
 export const checkInSchema: RxJsonSchema<CheckInDocument> = checkInSchemaLiteral;
+export const dayVisitSchema: RxJsonSchema<DayVisitDocument> = dayVisitSchemaLiteral;
 
 export type MonsterlyCollections = {
   check_ins: RxCollection<CheckInDocument>;
+  day_visits: RxCollection<DayVisitDocument>;
   plans: RxCollection<PlanDocument>;
   renewals: RxCollection<RenewalDocument>;
   subscribers: RxCollection<SubscriberDocument>;
@@ -392,6 +450,9 @@ async function createMonsterlyDatabase(name: string): Promise<MonsterlyDatabase>
   await database.addCollections({
     check_ins: {
       schema: checkInSchema,
+    },
+    day_visits: {
+      schema: dayVisitSchema,
     },
     plans: {
       schema: planSchema,

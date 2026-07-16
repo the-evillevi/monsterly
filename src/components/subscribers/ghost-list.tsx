@@ -18,10 +18,10 @@ function telHref(phoneNumber: string) {
 
 function lastSeenLabel(ghost: GhostRecord) {
   if (ghost.lastSeenKind === 'check_in') {
-    return `Última visita hace ${ghost.daysMissing} días`;
+    return `Última entrada hace ${ghost.daysMissing} días`;
   }
 
-  return `Sin visitas — ${ghost.daysMissing} días desde su último pago`;
+  return `Sin entradas — ${ghost.daysMissing} días desde su último pago`;
 }
 
 export function GhostList({ ghosts }: GhostListProps) {
@@ -73,7 +73,7 @@ export function GhostList({ ghosts }: GhostListProps) {
                     variant="outline"
                   >
                     <ScanLine aria-hidden />
-                    Registrar visita
+                    Registrar entrada
                   </Button>
                   {ghost.slug ? (
                     <Button asChild size="sm" variant="ghost">

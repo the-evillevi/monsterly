@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { DataLayerContext } from '@/lib/data/data-layer-context';
 import { saveSubscriber } from '@/lib/data/subscribers.commands';
+import { recordDayVisit } from '@/lib/data/day-visits.commands';
 import { listSubscribers } from '@/lib/data/subscribers.queries';
 import { cleanupTestDatabase, createTestDataContext } from '@/test/test-data-layer';
 
@@ -82,6 +83,25 @@ describe('EditSubscriberPage', () => {
 
     expect(await screen.findByText('subscribers-list')).toBeInTheDocument();
     await expect(listSubscribers(context)).resolves.toEqual([]);
+  });
+
+  it('shows the member-linked day-visit history', async () => {
+    const context = await createTestDataContext();
+    await saveSubscriber(context, { id: 'subscriber-1', name: 'Ana Torres' });
+    await recordDayVisit(context, {
+      now: new Date('2026-07-14T18:00:00.000Z'),
+      subscriber_id: 'subscriber-1',
+      visit_type: 'both',
+    });
+
+    await renderEditPage('subscriber-1');
+
+    expect(await screen.findByText('Visitas de un día')).toBeInTheDocument();
+    const visitHistory = await screen.findByRole('list', {
+      name: 'Visitas de un día del miembro',
+    });
+    expect(visitHistory).toHaveTextContent('Ambos');
+    expect(visitHistory).toHaveTextContent('$80');
   });
 
   it('keeps the subscriber when the archive confirmation is cancelled', async () => {

@@ -16,6 +16,7 @@ grant select, insert, update on public.subscriptions to anon;
 grant select, insert, update on public.renewals to anon;
 grant select, insert, update on public.plans to anon;
 grant select, insert, update on public.check_ins to anon;
+grant select, insert, update on public.day_visits to anon;
 
 drop policy if exists "Local dev anon can read subscribers" on public.subscribers;
 create policy "Local dev anon can read subscribers"
@@ -76,6 +77,18 @@ on public.check_ins for insert to anon with check (true);
 drop policy if exists "Local dev anon can update check_ins" on public.check_ins;
 create policy "Local dev anon can update check_ins"
 on public.check_ins for update to anon using (true) with check (true);
+
+drop policy if exists "Local dev anon can read day_visits" on public.day_visits;
+create policy "Local dev anon can read day_visits"
+on public.day_visits for select to anon using (true);
+
+drop policy if exists "Local dev anon can write day_visits" on public.day_visits;
+create policy "Local dev anon can write day_visits"
+on public.day_visits for insert to anon with check (true);
+
+drop policy if exists "Local dev anon can update day_visits" on public.day_visits;
+create policy "Local dev anon can update day_visits"
+on public.day_visits for update to anon using (true) with check (true);
 
 insert into public.organizations (id, name)
 values

@@ -145,7 +145,7 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
         console.error('Failed to record the check-in.', error);
         setOutcome({
           kind: 'error',
-          message: 'Revisa la conexión local e intenta de nuevo. No se registró otra visita.',
+          message: 'Revisa la conexión local e intenta de nuevo. No se registró otra entrada.',
         });
       } finally {
         submittingRef.current = false;
@@ -228,7 +228,7 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
           }}
         >
           <DialogHeader>
-            <DialogTitle>Registrar visita</DialogTitle>
+            <DialogTitle>Registrar entrada</DialogTitle>
             <DialogDescription>
               Busca por nombre, celular o PIN. Un PIN exacto se registra con Enter.
             </DialogDescription>
@@ -292,7 +292,7 @@ export function CheckInDialogProvider({ children }: { children: ReactNode }) {
 
             {isSubmitting ? (
               <p aria-live="polite" className="text-sm text-muted-foreground">
-                Registrando visita...
+                Registrando entrada...
               </p>
             ) : null}
 

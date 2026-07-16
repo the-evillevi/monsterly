@@ -5,6 +5,7 @@ import { LegacyCheckInRedirect } from '@/components/check-ins/legacy-check-in-re
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { UpdatePrompt } from '@/components/update-prompt';
 import { DashboardPage } from '@/pages/dashboard-page';
+import { DayVisitsPage } from '@/pages/day-visits-page';
 import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
 import { EditSubscriptionPage } from '@/pages/edit-subscription-page';
 import { NewSubscriberPage } from '@/pages/new-subscriber-page';
@@ -27,6 +28,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/day-visits" element={<DayVisitsPage />} />
             <Route path="/check-in" element={<LegacyCheckInRedirect />} />
             <Route path="/subscribers" element={<SubscribersPage />} />
             <Route path="/subscribers/new" element={<NewSubscriberPage />} />

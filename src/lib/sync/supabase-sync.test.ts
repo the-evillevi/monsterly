@@ -31,13 +31,14 @@ describe('Supabase organization sync', () => {
       },
     });
 
-    expect(replications).toHaveLength(5);
+    expect(replications).toHaveLength(6);
     expect(calls.map((call) => call.tableName)).toEqual([
       'plans',
       'subscribers',
       'subscriptions',
       'renewals',
       'check_ins',
+      'day_visits',
     ]);
     expect(calls.every((call) => call.pull && call.push)).toBe(true);
     expect(calls.every((call) => call.replicationIdentifier.includes('organization-1'))).toBe(true);
@@ -74,6 +75,7 @@ describe('Supabase organization sync', () => {
     expect(errorSubscriptions.subscriptions).not.toHaveBeenCalled();
     expect(errorSubscriptions.renewals).not.toHaveBeenCalled();
     expect(errorSubscriptions.check_ins).not.toHaveBeenCalled();
+    expect(errorSubscriptions.day_visits).not.toHaveBeenCalled();
   });
 
   it('adds organization filters to pull queries', async () => {

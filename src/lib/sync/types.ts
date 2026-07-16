@@ -28,7 +28,7 @@ export type SyncReplicationState = {
 export type SyncReplicationFactoryCall = {
   client: SupabaseClient;
   collection: MonsterlyDatabase[
-    'check_ins' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions'];
+    'check_ins' | 'day_visits' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions'];
   deletedField: '_deleted';
   live: boolean;
   modifiedField: '_modified';
@@ -45,7 +45,7 @@ export type SyncReplicationFactoryCall = {
   };
   replicationIdentifier: string;
   retryTime: number;
-  tableName: 'check_ins' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
+  tableName: 'check_ins' | 'day_visits' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
   waitForLeadership: boolean;
 };
 

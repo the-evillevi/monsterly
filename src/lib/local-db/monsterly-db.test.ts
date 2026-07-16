@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   closeMonsterlyDatabase,
+  dayVisitSchema,
   getMonsterlyDatabase,
   renewalSchema,
   subscriberSchema,
@@ -17,11 +18,12 @@ describe('Monsterly local RxDB database', () => {
     indexedDB.deleteDatabase('monsterly-test');
   });
 
-  it('initializes subscriber and subscription collections', async () => {
+  it('initializes the core and day-visit collections', async () => {
     const db = await getMonsterlyDatabase({ name: 'monsterly-test' });
 
     expect(db.subscribers).toBeDefined();
     expect(db.subscriptions).toBeDefined();
+    expect(db.day_visits).toBeDefined();
   });
 
   it('requires organization_id in organization-owned local schemas', () => {
@@ -29,6 +31,35 @@ describe('Monsterly local RxDB database', () => {
     expect(subscriptionSchema.required).toContain('organization_id');
     expect(subscriberSchema.properties).not.toHaveProperty('owner_id');
     expect(subscriptionSchema.properties).not.toHaveProperty('owner_id');
+    expect(dayVisitSchema.required).toContain('organization_id');
+    expect(dayVisitSchema.properties).not.toHaveProperty('owner_id');
+  });
+
+  it('adds the day-visits collection to an existing local database without losing data', async () => {
+    const databaseName = 'monsterly-add-collection-test';
+    const existingDatabase = await createRxDatabase<Pick<MonsterlyCollections, 'subscribers'>>({
+      name: databaseName,
+      storage: getRxStorageDexie(),
+      multiInstance: false,
+    });
+
+    await existingDatabase.addCollections({ subscribers: { schema: subscriberSchema } });
+    await existingDatabase.subscribers.insert({
+      _deleted: false,
+      _modified: '2026-07-01T00:00:00.000Z',
+      created_at: '2026-07-01T00:00:00.000Z',
+      gender: 'unspecified',
+      id: 'existing-subscriber',
+      name: 'Ana Torres',
+      organization_id: 'organization-1',
+      updated_at: '2026-07-01T00:00:00.000Z',
+    });
+    await existingDatabase.close();
+
+    const upgradedDatabase = await getMonsterlyDatabase({ name: databaseName });
+
+    expect(upgradedDatabase.day_visits).toBeDefined();
+    expect(await upgradedDatabase.subscribers.findOne('existing-subscriber').exec()).toBeTruthy();
   });
 
   it('supports basic local subscriber and subscription reads and writes', async () => {

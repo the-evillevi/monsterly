@@ -5,15 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 export type StatTone = 'destructive' | 'muted' | 'primary' | 'success' | 'warning';
 
 type StatTileBaseProps = {
+  detail?: string;
   label: string;
   tone: StatTone;
-  value: number;
+  value: number | string;
 };
 
 export type StatTileProps = StatTileBaseProps &
   ({ onClick: () => void; to?: never } | { onClick?: never; to: string });
 
-export function StatTile({ label, onClick, to, tone, value }: StatTileProps) {
+export function StatTile({ detail, label, onClick, to, tone, value }: StatTileProps) {
   const content = (
     <Card className="h-full gap-2 border-t-4 transition-shadow hover:shadow-md" data-tone={tone}>
       <CardHeader>
@@ -25,6 +26,7 @@ export function StatTile({ label, onClick, to, tone, value }: StatTileProps) {
         <strong className="text-4xl font-black leading-none tabular-nums tracking-tight text-foreground">
           {value}
         </strong>
+        {detail ? <span className="mt-1 block text-xs text-muted-foreground">{detail}</span> : null}
       </CardContent>
     </Card>
   );
