@@ -2,6 +2,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { PageFrame } from '@/components/page-frame';
 import { ArchiveConfirmButton } from '@/components/archive-confirm-button';
+import { DayVisitHistorySection } from '@/components/day-visits/day-visit-history-section';
 import { ResourceNotFound } from '@/components/resource-not-found';
 import { SubscriptionListSection } from '@/components/subscriptions/subscription-list-section';
 import {
@@ -76,6 +77,7 @@ export function EditSubscriberPage() {
             subscriberSlug={subscriberUrlSegment(subscriber)}
             subscriptions={subscriber.subscriptions}
           />
+          <DayVisitHistorySection subscriberId={subscriber.id} />
         </div>
       ) : null}
     </PageFrame>

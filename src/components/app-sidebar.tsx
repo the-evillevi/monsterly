@@ -1,4 +1,4 @@
-import { LayoutDashboard, ScanLine, Settings, Users } from 'lucide-react';
+import { LayoutDashboard, ScanLine, Settings, TicketCheck, Users } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 import { SyncStatus } from '@/components/sync-status';
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/sidebar';
 
 const navItems = [
+  { icon: TicketCheck, label: 'Visitas', path: '/day-visits' },
   { icon: Users, label: 'Suscriptores', path: '/subscribers' },
   { icon: Settings, label: 'Ajustes', path: '/settings' },
 ];
