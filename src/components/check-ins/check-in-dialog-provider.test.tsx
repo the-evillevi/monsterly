@@ -118,7 +118,7 @@ describe('CheckInDialogProvider', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     fireEvent.click(screen.getByRole('button', { name: 'Check-in directo' }));
 
-    expect(await screen.findByText('No se pudo registrar la visita')).toBeInTheDocument();
+    expect(await screen.findByText('No se pudo registrar la entrada')).toBeInTheDocument();
     await expect(listCheckIns(context)).resolves.toHaveLength(0);
   });
 
@@ -151,8 +151,8 @@ describe('CheckInDialogProvider', () => {
     fireEvent.change(input, { target: { value: subscriber.check_in_code } });
     fireEvent.submit(input.closest('form')!);
 
-    expect(await screen.findByText('Visita bloqueada')).toBeInTheDocument();
-    expect(screen.getByText(/Renueva antes de registrar la visita/)).toBeInTheDocument();
+    expect(await screen.findByText('Entrada bloqueada')).toBeInTheDocument();
+    expect(screen.getByText(/Renueva antes de registrar la entrada/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Renovar' })).toBeInTheDocument();
     await expect(listCheckIns(context)).resolves.toHaveLength(0);
     await waitFor(() => expect(input).toHaveFocus());
@@ -174,7 +174,7 @@ describe('CheckInDialogProvider', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Registrar visita' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Registrar entrada' })).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/dashboard');
   });
 });

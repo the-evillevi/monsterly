@@ -19,14 +19,13 @@ export function CheckInFeed({ items }: CheckInFeedProps) {
           onClick={openSearch}
           type="button"
         >
-          Registrar visita
+          Registrar entrada
         </button>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Todavía no hay entradas. Las visitas aparecerán aquí en cuanto alguien registre su
-            código.
+            Todavía no hay entradas. Aparecerán aquí en cuanto alguien registre su código.
           </p>
         ) : (
           <ul className="divide-y" aria-label="Entradas recientes">

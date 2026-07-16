@@ -37,7 +37,7 @@ describe('GhostList', () => {
 
     expect(screen.getByText('JR')).toBeInTheDocument();
     expect(screen.getByText('PIN 654321')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar visita' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar entrada' }));
 
     expect(recordSubscriber).toHaveBeenCalledWith('member-1');
   });

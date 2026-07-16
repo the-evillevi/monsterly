@@ -84,7 +84,7 @@ export function SubscriberList({
                       variant="outline"
                     >
                       <ScanLine aria-hidden />
-                      Registrar visita
+                      Registrar entrada
                     </Button>
                     {subscriptions.length > 0 ? (
                       <RenewDialog subscriptions={subscriptions} />

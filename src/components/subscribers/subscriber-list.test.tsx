@@ -102,7 +102,7 @@ describe('SubscriberList', () => {
     const recordSubscriber = renderList([summary()]);
 
     expect(screen.getByText('PIN 123456')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar visita' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar entrada' }));
 
     expect(recordSubscriber).toHaveBeenCalledWith('subscriber-1');
   });

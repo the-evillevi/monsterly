@@ -66,7 +66,7 @@ export function CheckInResultCard({
         className="grid gap-1 rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center"
         role="alert"
       >
-        <p className="text-lg font-bold text-destructive">No se pudo registrar la visita</p>
+        <p className="text-lg font-bold text-destructive">No se pudo registrar la entrada</p>
         <p className="text-sm text-muted-foreground">{outcome.message}</p>
       </div>
     );
@@ -127,7 +127,7 @@ export function CheckInResultCard({
                 isStillExpired ? toneStyles.destructive.headline : toneStyles.success.headline,
               )}
             >
-              {isStillExpired ? 'Visita bloqueada' : 'Membresía renovada'}
+              {isStillExpired ? 'Entrada bloqueada' : 'Membresía renovada'}
             </p>
             <p className="truncate text-lg font-semibold">{subscriber.name}</p>
           </div>
@@ -135,9 +135,9 @@ export function CheckInResultCard({
         <p className="text-sm">
           {isStillExpired
             ? paidUntil
-              ? `La membresía venció el ${paidUntil}. Renueva antes de registrar la visita.`
-              : 'La membresía está vencida. Renueva antes de registrar la visita.'
-            : 'Registra la visita nuevamente para permitir el acceso.'}
+              ? `La membresía venció el ${paidUntil}. Renueva antes de registrar la entrada.`
+              : 'La membresía está vencida. Renueva antes de registrar la entrada.'
+            : 'Registra la entrada nuevamente para permitir el acceso.'}
         </p>
         {isStillExpired && subscriptions.length > 0 ? (
           <RenewDialog
