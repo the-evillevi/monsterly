@@ -81,4 +81,17 @@ describe('Supabase replication migrations', () => {
     // No derived subscription status may be persisted on scan rows.
     expect(migration).not.toMatch(/status\s+text/i);
   });
+
+  it('adds organization-scoped replicated day visits without attendance or status fields', async () => {
+    const migration = await readMigrationContaining('add_day_visits');
+
+    expect(migration).toContain('create table public.day_visits');
+    expect(migration).toContain("check (visit_type in ('gym', 'crossfit', 'both'))");
+    expect(migration).toContain('day_visits_price_non_negative');
+    expect(migration).toContain('references public.subscribers (id, organization_id)');
+    expect(migration).toContain('execute function public.set_rxdb_sync_metadata()');
+    expect(migration).toContain('alter table public.day_visits enable row level security');
+    expect(migration).toMatch(/alter publication supabase_realtime\s+add table public\.day_visits/);
+    expect(migration).not.toMatch(/checked_in_at|status\s+text/i);
+  });
 });

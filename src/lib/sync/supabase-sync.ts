@@ -14,8 +14,9 @@ type CreateSupabaseReplicationsOptions = {
 };
 
 type CollectionSyncConfig = {
-  collectionName: 'check_ins' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
-  tableName: 'check_ins' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
+  collectionName:
+    'check_ins' | 'day_visits' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
+  tableName: 'check_ins' | 'day_visits' | 'plans' | 'renewals' | 'subscribers' | 'subscriptions';
 };
 
 const collectionSyncConfigs: CollectionSyncConfig[] = [
@@ -24,6 +25,7 @@ const collectionSyncConfigs: CollectionSyncConfig[] = [
   { collectionName: 'subscriptions', tableName: 'subscriptions' },
   { collectionName: 'renewals', tableName: 'renewals' },
   { collectionName: 'check_ins', tableName: 'check_ins' },
+  { collectionName: 'day_visits', tableName: 'day_visits' },
 ];
 
 export function createSupabaseReplications({
