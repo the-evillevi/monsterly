@@ -5,6 +5,7 @@ import './styles.css';
 import App from './App.tsx';
 import { CheckInDialogProvider } from '@/components/check-ins/check-in-dialog-provider';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/lib/auth/auth-provider';
 import { DataLayerProvider } from '@/lib/data/data-layer-provider';
 import { SyncProvider } from '@/lib/sync/sync-provider';
 import { appUpdateManager } from '@/pwa/app-update';
@@ -17,13 +18,15 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <BrowserRouter>
-        <DataLayerProvider>
-          <SyncProvider>
-            <CheckInDialogProvider>
-              <App />
-            </CheckInDialogProvider>
-          </SyncProvider>
-        </DataLayerProvider>
+        <AuthProvider>
+          <DataLayerProvider>
+            <SyncProvider>
+              <CheckInDialogProvider>
+                <App />
+              </CheckInDialogProvider>
+            </SyncProvider>
+          </DataLayerProvider>
+        </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
   </StrictMode>,

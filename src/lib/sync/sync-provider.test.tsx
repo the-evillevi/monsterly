@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SyncStatus } from '@/components/sync-status';
+import { AuthContext, type AuthContextValue, type AuthStatus } from '@/lib/auth/auth-context';
 import { DataLayerContext, demoOrganizationId } from '@/lib/data/data-layer-context';
 import type { MonsterlyDatabase } from '@/lib/local-db/monsterly-db';
 
@@ -32,13 +33,27 @@ vi.mock('@/lib/supabase', async (importOriginal) => {
 
 const organizationUuid = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
 
-function renderSyncProvider(activeOrganizationId: string) {
+function makeAuthValue(status: AuthStatus): AuthContextValue {
+  return {
+    status,
+    session: null,
+    role: null,
+    offline: false,
+    signIn: async () => {},
+    signOut: async () => {},
+    retry: () => {},
+  };
+}
+
+function renderSyncProvider(activeOrganizationId: string, authStatus: AuthStatus = 'member') {
   return render(
-    <DataLayerContext.Provider value={{ activeOrganizationId, db: {} as MonsterlyDatabase }}>
-      <SyncProvider>
-        <SyncStatus />
-      </SyncProvider>
-    </DataLayerContext.Provider>,
+    <AuthContext.Provider value={makeAuthValue(authStatus)}>
+      <DataLayerContext.Provider value={{ activeOrganizationId, db: {} as MonsterlyDatabase }}>
+        <SyncProvider>
+          <SyncStatus />
+        </SyncProvider>
+      </DataLayerContext.Provider>
+    </AuthContext.Provider>,
   );
 }
 
@@ -73,15 +88,40 @@ describe('SyncProvider', () => {
     expect(createSupabaseReplications).not.toHaveBeenCalled();
   });
 
-  it('starts replication for the configured organization uuid', () => {
+  it('starts replication for the configured organization uuid once auth confirms membership', () => {
     stubSupabaseEnv();
 
-    renderSyncProvider(organizationUuid);
+    renderSyncProvider(organizationUuid, 'member');
 
     expect(createSupabaseReplications).toHaveBeenCalledTimes(1);
     expect(createSupabaseReplications).toHaveBeenCalledWith(
       expect.objectContaining({ activeOrganizationId: organizationUuid }),
     );
+  });
+
+  it('stays local while signed out even for the configured organization', () => {
+    stubSupabaseEnv();
+
+    renderSyncProvider(organizationUuid, 'signedOut');
+
+    expect(createSupabaseReplications).not.toHaveBeenCalled();
+    expect(screen.getByText('Local only')).toBeInTheDocument();
+  });
+
+  it('stays local while access is denied even for the configured organization', () => {
+    stubSupabaseEnv();
+
+    renderSyncProvider(organizationUuid, 'denied');
+
+    expect(createSupabaseReplications).not.toHaveBeenCalled();
+  });
+
+  it('starts replication when auth is disabled (anon local dev)', () => {
+    stubSupabaseEnv();
+
+    renderSyncProvider(organizationUuid, 'disabled');
+
+    expect(createSupabaseReplications).toHaveBeenCalledTimes(1);
   });
 
   it('shows local-only mode instead of synced when replication is not configured', () => {
