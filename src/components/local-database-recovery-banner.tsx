@@ -31,7 +31,7 @@ export function LocalDatabaseRecoveryBanner({
     <div className="fixed inset-x-4 top-4 z-50 flex justify-center">
       <Card className="grid max-w-xl gap-3 p-4 shadow-lg" role="alert">
         <p className="text-sm text-foreground">
-          Los datos locales están tardando demasiado en cargar. Otra pestaña o ventana de Monsterly
+          Los datos locales están tardando demasiado en cargar. Otra pestaña o ventana de MythOS
           puede estar bloqueando la actualización — cierra las demás pestañas de la aplicación y
           recarga.
         </p>

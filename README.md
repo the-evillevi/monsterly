@@ -1,10 +1,12 @@
-# Monsterly
+# MythOS
 
 Offline-first PWA for gym and CrossFit subscription control.
 
 This repository has been initialized from the product brief in
-[`monsterly.md`](monsterly.md). The app is a Vite React SPA built with
-TypeScript and managed with pnpm.
+[`monsterly.md`](monsterly.md) (the app was renamed from Monsterly to MythOS;
+internal identifiers — env vars, storage keys, database names — keep the
+`monsterly` prefix on purpose so existing local data is never orphaned). The
+app is a Vite React SPA built with TypeScript and managed with pnpm.
 
 ## Development
 
@@ -28,7 +30,7 @@ pnpm build
 
 ## Supabase setup
 
-Monsterly uses a browser Supabase client configured with Vite environment
+MythOS uses a browser Supabase client configured with Vite environment
 variables. Create a local `.env` file from `.env.example`:
 
 ```sh
@@ -89,7 +91,7 @@ cached membership when the network check can't run.
 
 ## Routing
 
-Monsterly currently uses React Router browser routing. Static hosts must rewrite
+MythOS currently uses React Router browser routing. Static hosts must rewrite
 unknown paths to `index.html` so direct visits like `/settings` load the app.
 This repository includes placeholder fallback config for Vercel (`vercel.json`)
 and Netlify-compatible static hosts (`public/_redirects`).

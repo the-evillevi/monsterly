@@ -68,7 +68,7 @@ export function LoginPage() {
             >
               M
             </span>
-            <h1 className="text-2xl font-black tracking-tight text-foreground">Monsterly</h1>
+            <h1 className="text-2xl font-black tracking-tight text-foreground">MythOS</h1>
             <p className="text-sm text-muted-foreground">
               Inicia sesión para administrar tus miembros y sincronizar tus datos.
             </p>

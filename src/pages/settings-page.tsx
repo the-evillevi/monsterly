@@ -20,7 +20,7 @@ export function SettingsPage() {
   }
 
   return (
-    <PageFrame title="Settings" subtitle="Configure the defaults Monsterly will use.">
+    <PageFrame title="Settings" subtitle="Configure the defaults MythOS will use.">
       <div className="grid max-w-3xl gap-3">
         {[
           ['Warning window', '3 days before expiration'],

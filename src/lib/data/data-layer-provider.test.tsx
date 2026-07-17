@@ -57,7 +57,7 @@ describe('DataLayerProvider blocked-open recovery', () => {
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Otra pestaña o ventana de Monsterly puede estar bloqueando la actualización',
+      'Otra pestaña o ventana de MythOS puede estar bloqueando la actualización',
     );
     expect(screen.getByRole('button', { name: 'Recargar' })).toBeInTheDocument();
     // First failure: reload is the only offer, the destructive reset stays hidden.

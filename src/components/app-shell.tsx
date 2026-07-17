@@ -21,7 +21,7 @@ export function AppShell() {
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
           <SidebarTrigger />
           <NavLink className="font-black md:hidden" to="/dashboard">
-            Monsterly
+            MythOS
           </NavLink>
         </header>
         <div className="w-full max-w-6xl p-4 sm:p-6 lg:p-10">

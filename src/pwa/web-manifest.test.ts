@@ -6,8 +6,8 @@ const hexColorPattern = /^#[0-9a-f]{6}$/;
 
 describe('web manifest', () => {
   it('identifies the installable app', () => {
-    expect(webManifest.name).toBe('Monsterly');
-    expect(webManifest.short_name).toBe('Monsterly');
+    expect(webManifest.name).toBe('MythOS');
+    expect(webManifest.short_name).toBe('MythOS');
     expect(webManifest.display).toBe('standalone');
     expect(webManifest.start_url).toBe('/');
     expect(webManifest.scope).toBe('/');
