@@ -1,10 +1,14 @@
-# Approve dependency build scripts. Under CI=true (e.g. Cloudflare Pages) pnpm
-# escalates an unapproved build script to a hard error (ERR_PNPM_IGNORED_BUILDS),
-# so every dependency that runs an install script must be listed here. esbuild is
-# currently the only one. This is the location pnpm 11 reads — the `pnpm` field in
-# package.json is ignored. Requires the deploy to run the pinned pnpm (packageManager).
+# Approve dependency build scripts. Under CI=true (e.g. Cloudflare) pnpm 11
+# escalates an unapproved build script to a hard error (ERR_PNPM_IGNORED_BUILDS).
+# esbuild is a direct project dependency. sharp and workerd are NOT in our tree:
+# Cloudflare installs its own deploy tooling (wrangler -> workerd + sharp) in the
+# repo root during the build, and pnpm blocks their install scripts unless listed
+# here. This is the location pnpm 11 reads; the `pnpm` field in package.json is
+# ignored. The allowlist is keyed by package name, so it covers any version CF pulls.
 allowBuilds:
   esbuild: true
+  sharp: true
+  workerd: true
 
 overrides:
   fast-uri@3.1.3: 4.1.0
