@@ -1,7 +1,7 @@
 export const webManifest = {
-  name: 'Monsterly',
-  short_name: 'Monsterly',
-  description: 'Monsterly helps gyms and CrossFit boxes track subscriber payment status.',
+  name: 'MythOS',
+  short_name: 'MythOS',
+  description: 'MythOS helps gyms and CrossFit boxes track subscriber payment status.',
   display: 'standalone' as const,
   start_url: '/',
   scope: '/',

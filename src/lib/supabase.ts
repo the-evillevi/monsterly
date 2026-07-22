@@ -15,7 +15,13 @@ export function getSupabaseClient() {
     throw new Error(`Missing Supabase environment variables: ${missingEnvVars.join(', ')}`);
   }
 
-  supabaseClient ??= createClient(supabaseUrl, supabasePublishableKey);
+  supabaseClient ??= createClient(supabaseUrl, supabasePublishableKey, {
+    // PKCE is the flow for browser OAuth: the callback carries a `?code=` that
+    // the singleton client exchanges for a session. The other auth defaults
+    // (localStorage persistSession, autoRefreshToken, detectSessionInUrl) are
+    // already what we want.
+    auth: { flowType: 'pkce' },
+  });
 
   return supabaseClient;
 }
@@ -38,4 +44,16 @@ export function hasSupabaseConfig() {
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY &&
     getConfiguredOrganizationId(),
   );
+}
+
+/**
+ * Whether the app must gate access behind a Google sign-in. Fails closed: any
+ * value other than the explicit `anon` opt-out (unset, typo, empty) keeps auth
+ * required, so a misconfigured prod deploy never silently drops the gate.
+ * Local dev opts out on purpose via `VITE_MONSTERLY_AUTH_MODE=anon`, which
+ * pairs with the permissive anon grants in `supabase/seed.sql`. Demo mode
+ * (no Supabase config) is never gated.
+ */
+export function isAuthRequired() {
+  return hasSupabaseConfig() && import.meta.env.VITE_MONSTERLY_AUTH_MODE !== 'anon';
 }

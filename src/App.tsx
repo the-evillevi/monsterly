@@ -1,55 +1,24 @@
-import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 
-import { AppSidebar } from '@/components/app-sidebar';
-import { LegacyCheckInRedirect } from '@/components/check-ins/legacy-check-in-redirect';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { UpdatePrompt } from '@/components/update-prompt';
-import { DashboardPage } from '@/pages/dashboard-page';
-import { DayVisitsPage } from '@/pages/day-visits-page';
-import { EditSubscriberPage } from '@/pages/edit-subscriber-page';
-import { EditSubscriptionPage } from '@/pages/edit-subscription-page';
-import { NewSubscriberPage } from '@/pages/new-subscriber-page';
-import { NewSubscriptionPage } from '@/pages/new-subscription-page';
-import { SettingsPage } from '@/pages/settings-page';
-import { SubscribersPage } from '@/pages/subscribers-page';
+import { AppShell } from '@/components/app-shell';
+import { RequireAuth } from '@/components/require-auth';
+import { AuthCallbackPage } from '@/pages/auth-callback-page';
+import { LoginPage } from '@/pages/login-page';
 
 function App() {
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-          <SidebarTrigger />
-          <NavLink className="font-black md:hidden" to="/dashboard">
-            Monsterly
-          </NavLink>
-        </header>
-        <div className="w-full max-w-6xl p-4 sm:p-6 lg:p-10">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/day-visits" element={<DayVisitsPage />} />
-            <Route path="/check-in" element={<LegacyCheckInRedirect />} />
-            <Route path="/subscribers" element={<SubscribersPage />} />
-            <Route path="/subscribers/new" element={<NewSubscriberPage />} />
-            <Route path="/subscribers/:slug/edit" element={<EditSubscriberPage />} />
-            <Route path="/subscribers/:slug/subscriptions/new" element={<NewSubscriptionPage />} />
-            <Route
-              path="/subscribers/:slug/subscriptions/:subscriptionId/edit"
-              element={<EditSubscriptionPage />}
-            />
-            <Route path="/vencidos" element={<Navigate to="/subscribers?tab=vencidos" replace />} />
-            <Route
-              path="/por-vencer"
-              element={<Navigate to="/subscribers?tab=por-vencer" replace />}
-            />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </div>
-        <UpdatePrompt />
-      </SidebarInset>
-    </SidebarProvider>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route
+        path="/*"
+        element={
+          <RequireAuth>
+            <AppShell />
+          </RequireAuth>
+        }
+      />
+    </Routes>
   );
 }
 

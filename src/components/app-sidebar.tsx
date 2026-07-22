@@ -36,14 +36,14 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
-              <NavLink aria-label="Monsterly dashboard" to="/dashboard">
+              <NavLink aria-label="MythOS dashboard" to="/dashboard">
                 <span
                   aria-hidden
                   className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-lg font-black text-primary-foreground"
                 >
                   M
                 </span>
-                <span className="text-lg font-black">Monsterly</span>
+                <span className="text-lg font-black">MythOS</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>

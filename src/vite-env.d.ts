@@ -5,6 +5,7 @@
 declare const __APP_BUILD_ID__: string;
 
 interface ImportMetaEnv {
+  readonly VITE_MONSTERLY_AUTH_MODE?: string;
   readonly VITE_MONSTERLY_ORGANIZATION_ID?: string;
   readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string;
   readonly VITE_SUPABASE_URL?: string;

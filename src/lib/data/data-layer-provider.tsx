@@ -70,7 +70,7 @@ export function DataLayerProvider({ children }: { children: ReactNode }) {
     // still holds a connection to it.
     const slowOpenWarning = setTimeout(() => {
       console.warn(
-        'The local database is taking unusually long to open. Another Monsterly tab or window ' +
+        'The local database is taking unusually long to open. Another MythOS tab or window ' +
           'may be blocking a storage upgrade — close every other tab of this app and reload.',
       );
       getAttemptStorage()?.setItem(failedOpenAttemptsKey, String(readFailedOpenAttempts() + 1));

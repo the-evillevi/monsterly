@@ -334,6 +334,18 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# Google is the app's only OAuth provider. Production configures it in the
+# Supabase Dashboard (Auth → Providers → Google). Local dev does NOT need it:
+# the default local workflow runs with VITE_MONSTERLY_AUTH_MODE=anon plus the
+# anon grants in supabase/seed.sql, so no Google credentials are required.
+# Uncomment and set the two env vars only to exercise the real OAuth flow
+# locally (skip_nonce_check is required for local Google sign-in).
+# [auth.external.google]
+# enabled = true
+# client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+# secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+# skip_nonce_check = true
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]
