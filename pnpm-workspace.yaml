@@ -1,3 +1,8 @@
+# Approve dependency build scripts. Under CI=true (e.g. Cloudflare Pages) pnpm
+# escalates an unapproved build script to a hard error (ERR_PNPM_IGNORED_BUILDS),
+# so every dependency that runs an install script must be listed here. esbuild is
+# currently the only one. This is the location pnpm 11 reads — the `pnpm` field in
+# package.json is ignored. Requires the deploy to run the pinned pnpm (packageManager).
 allowBuilds:
   esbuild: true
 
